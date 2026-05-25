@@ -1,0 +1,18 @@
+export const TYPES_CONFIG = {
+    UPDATE_TAP_TO_PAY_POPUP_COUNT: 'update_tap_to_pay_popup_count',
+};
+
+export const FEATURE_GATE = {
+    GET_FEATURE_GATE_DETAILS: 'GET_FEATURE_GATE_DETAILS',
+    UPDATE_CALL_CENTER_CONFIG: 'UPDATE_CALL_CENTER_CONFIG',
+    GET_CONFIG_FEATURE_GATE_DETAILS_SUCCESS: 'get_config_feature_gate_details_success',
+    GET_FEATURE_GATE_DETAILS_SUCCESS: 'get_feature_gate_details_success',
+};
+
+export const FREEMIUM_PREMIUM = {
+    GET_PREMIUM_MODULES: 'GET_PREMIUM_MODULES',
+};
+
+export const INITIALIZE_FUSION = {
+    SET_ACTIVE_HOST_FUSION_DEVICE: 'SET_ACTIVE_HOST_FUSION_DEVICE',
+};

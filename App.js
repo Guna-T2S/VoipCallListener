@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {View, ActivityIndicator, StyleSheet, StatusBar} from 'react-native';
 import {Provider} from 'react-redux';
-import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import store, {restoreSession} from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -16,11 +16,9 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" />
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-          <View style={styles.splash}>
-            <ActivityIndicator size="large" color="#fff" />
-          </View>
-        </SafeAreaView>
+        <View style={styles.splash}>
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
       </SafeAreaProvider>
     );
   }
@@ -28,16 +26,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <Provider store={store}>
-          <AppNavigator />
-        </Provider>
-      </SafeAreaView>
+      <Provider store={store}>
+        <AppNavigator />
+      </Provider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {flex: 1},
   splash: {flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center'},
 });

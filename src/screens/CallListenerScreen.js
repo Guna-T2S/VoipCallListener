@@ -5,9 +5,9 @@ import {
   StyleSheet,
   Platform,
   PermissionsAndroid,
-  Alert,
   TouchableOpacity,
   NativeModules,
+  Linking,
 } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,35 +22,38 @@ import {
 } from '../services/callListenerNativeStorage';
 import { onLogoutAction } from 'appmodules/AuthModule/Redux/AuthActions';
 import { parseCallerInfo } from '../utils/phoneUtils';
+import { getVersion, getBuildNumber } from 'react-native-device-info';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { CallDetection } = NativeModules;
+
+const REQUIRED_PHONE_PERMISSIONS = [
+  PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+  PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
+];
+
+const checkRequiredPhonePermissions = async () => {
+  if (Platform.OS !== 'android') return true;
+  const results = await Promise.all(
+    REQUIRED_PHONE_PERMISSIONS.map(p => PermissionsAndroid.check(p)),
+  );
+  return results.every(Boolean);
+};
 
 // ─── Permission request (Android only) ──────────────────────────────────────
 
 const requestAndroidPermissions = async () => {
   if (Platform.OS !== 'android') return true;
 
-  const permissions = [
-    PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
-    PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-  ];
+  const permissions = [...REQUIRED_PHONE_PERMISSIONS];
   if (Platform.Version >= 26 && PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS) {
     permissions.push(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
   }
 
   const results = await PermissionsAndroid.requestMultiple(permissions);
-  const allGranted = Object.values(results).every(
+  return Object.values(results).every(
     r => r === PermissionsAndroid.RESULTS.GRANTED,
   );
-
-  if (!allGranted) {
-    Alert.alert(
-      'Permissions Required',
-      'Phone state and call log permissions are needed to detect incoming calls.',
-    );
-  }
-
-  return allGranted;
 };
 
 export default function CallListenerScreen() {
@@ -61,20 +64,35 @@ export default function CallListenerScreen() {
   const cleanupRef = useRef(null);
   const [takeawayNumber, setTakeawayNumber] = useState(null);
   const [overlayGranted, setOverlayGranted] = useState(true);
+  const [phonePermissionsGranted, setPhonePermissionsGranted] = useState(true);
+  const [versionLabel, setVersionLabel] = useState('');
 
   useEffect(() => {
     dispatch(callListenerScreenLoaded());
   }, [dispatch]);
 
-  // Check overlay permission on mount and whenever the screen regains focus.
+  useEffect(() => {
+    Promise.all([getVersion(), getBuildNumber()])
+      .then(([version, build]) => {
+        setVersionLabel(`V ${version} - ${build}`);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Re-check overlay and phone permissions when the user returns from Settings.
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const check = () =>
+    const checkOverlay = () =>
       CallDetection?.canDrawOverlays?.()
         .then(granted => setOverlayGranted(granted))
         .catch(() => {});
+    const checkPhone = () =>
+      checkRequiredPhonePermissions().then(setPhonePermissionsGranted);
+    const check = () => {
+      checkOverlay();
+      checkPhone();
+    };
     check();
-    // Re-check when the user comes back from system settings.
     const interval = setInterval(check, 2000);
     return () => clearInterval(interval);
   }, []);
@@ -114,6 +132,8 @@ export default function CallListenerScreen() {
 
     const init = async () => {
       const granted = await requestAndroidPermissions();
+      const requiredGranted = await checkRequiredPhonePermissions();
+      if (mounted) setPhonePermissionsGranted(requiredGranted);
       if (!granted || !mounted) return;
 
       const handleIncomingCall = (phoneNo) => {
@@ -134,16 +154,20 @@ export default function CallListenerScreen() {
     };
   }, [dispatch, takeawayNumber]);
 
-  const statusColor =
-    {
-      idle: '#4CAF50',
-      sending: '#FF9800',
-      success: '#2196F3',
-      failure: '#F44336',
-    }[callState.webhookStatus] ?? '#4CAF50';
+  const listeningActive =
+    Platform.OS !== 'android' || phonePermissionsGranted;
+  const statusColor = !listeningActive
+    ? '#FF9800'
+    : {
+        idle: '#4CAF50',
+        sending: '#FF9800',
+        success: '#2196F3',
+        failure: '#F44336',
+      }[callState.webhookStatus] ?? '#4CAF50';
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} >
+      <View style={styles.content}>
       {/* Header */}
       <View style={styles.headerRow}>
         <View>
@@ -163,15 +187,27 @@ export default function CallListenerScreen() {
         </TouchableOpacity>
       </View>
 
+      {Platform.OS === 'android' && !phonePermissionsGranted && (
+        <TouchableOpacity
+          style={styles.warningBanner}
+          onPress={() => Linking.openSettings()}
+        >
+          <Text style={styles.warningBannerText}>
+            Phone and call log access are required to detect incoming calls
+          </Text>
+          <Text style={styles.warningBannerAction}>Tap to open Settings</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Overlay permission nudge — only shown when permission is missing */}
       {Platform.OS === 'android' && !overlayGranted && (
         <TouchableOpacity
-          style={styles.overlayBanner}
+          style={styles.warningBanner}
           onPress={() => CallDetection?.requestOverlayPermission?.()}>
-          <Text style={styles.overlayBannerText}>
+          <Text style={styles.warningBannerText}>
             Enable "Display over other apps" to see call alerts on any screen
           </Text>
-          <Text style={styles.overlayBannerAction}>Tap to open Settings</Text>
+          <Text style={styles.warningBannerAction}>Tap to open Settings</Text>
         </TouchableOpacity>
       )}
 
@@ -183,7 +219,11 @@ export default function CallListenerScreen() {
         {/* Status badge */}
         <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
           <Text style={styles.statusText}>
-            {callState.isIncomingCall ? 'Incoming Call!' : 'Listening...'}
+            {callState.isIncomingCall
+              ? 'Incoming Call!'
+              : listeningActive
+                ? 'Listening...'
+                : 'Permissions required'}
           </Text>
         </View>
 
@@ -215,7 +255,12 @@ export default function CallListenerScreen() {
             </View>
           ))}
       </>}
-    </View>
+      </View>
+
+      {versionLabel ? (
+        <Text style={styles.versionText}>{versionLabel}</Text>
+      ) : null}
+    </SafeAreaView>
   );
 }
 
@@ -224,7 +269,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
     padding: 24,
-    paddingTop: 60,
+  },
+  content: {
+    flex: 1,
+  },
+  versionText: {
+    color: '#555',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
   },
   headerRow: {
     flexDirection: 'row',
@@ -288,17 +341,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  overlayBanner: {
+  warningBanner: {
     backgroundColor: '#7C4700',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
   },
-  overlayBannerText: {
+  warningBannerText: {
     color: '#FFD580',
     fontSize: 13,
   },
-  overlayBannerAction: {
+  warningBannerAction: {
     color: '#FFD580',
     fontSize: 12,
     marginTop: 4,

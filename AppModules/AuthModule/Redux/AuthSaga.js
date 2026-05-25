@@ -13,7 +13,6 @@ import { formatCallCenterConfig } from 'webmodules/Utils/WebHelpers';
 import { isFusionDevice, isNormalDevice, isTabletDevice, isWeb } from 't2sbasemodule/Utils/AppTypeHelper';
 import { ACTIVE_STORE_TYPES } from 'appmodules/SelectTakeawayModule/Redux/SelectTakeawayTypes';
 import { AdyenTapToPay } from 'appmodules/NativeModules/MYTNativeSupport';
-import reactotron from 'reactotron-react-native';
 
 export function* makeLoginCall(action) {
     try {
@@ -62,7 +61,6 @@ function* registerSelectedTA({ phone, takeawayList }) {
         const latestSelectedStoreId = yield select((state) => state.appState?.latestSelectedStoreId);
         // const generatedLicenseKey = yield select((state) => state.appState.generatedLicenseKey);
         const settingsResponse = yield select((state) => state.dashboardState.settingsResponse);
-        reactotron.log('settingsResponse', settingsResponse);
 
         yield put({ type: AuthTypes.LOGIN_API.PERSISTS_PHONE_NUMBER, payload: { phone: phone } }); //persistsMobileNoAction
 

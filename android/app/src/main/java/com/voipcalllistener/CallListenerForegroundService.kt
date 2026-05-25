@@ -137,13 +137,15 @@ class CallListenerForegroundService : Service() {
     }
 
     private fun getBestCountryIso(context: Context): String {
-        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+       val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
 
-        tm?.simCountryIso?.takeIf { it.isNotBlank() }?.let { return it.uppercase() }
-        tm?.networkCountryIso?.takeIf { it.isNotBlank() }?.let { return it.uppercase() }
-        Locale.getDefault().country.takeIf { it.isNotBlank() }?.let { return it.uppercase() }
+        val simIso = tm?.simCountryIso
+        simIso?.takeIf { it.isNotBlank() }?.let { return it.uppercase() }
 
-        return "AU"
+        val storedIso = CallListenerStorage.getCountryIso(context)
+        storedIso?.takeIf { it.isNotBlank() }?.let { return it.uppercase() }
+        
+        return "unknown"
     }
 
     private fun sanitizePhone(value: String): String =

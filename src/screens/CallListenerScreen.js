@@ -21,7 +21,6 @@ import {
   clearTakeawayNumberForNative,
 } from '../services/callListenerNativeStorage';
 import { onLogoutAction } from 'appmodules/AuthModule/Redux/AuthActions';
-import reactotron from 'reactotron-react-native';
 import { parseCallerInfo } from '../utils/phoneUtils';
 
 const { CallDetection } = NativeModules;
@@ -118,9 +117,8 @@ export default function CallListenerScreen() {
       if (!granted || !mounted) return;
 
       const handleIncomingCall = (phoneNo) => {
-        reactotron.log(`>>>123>>>>phoneNo=${phoneNo}, storeCountryCode=${storeCountryCode}`)
         const {phoneNumber} = parseCallerInfo(phoneNo, storeCountryCode);
-        reactotron.log(`>>>123>>>>phoneNumber=${phoneNumber}, takeawayNumber=${takeawayNumber}`)
+        
         dispatch(incomingCallDetected(phoneNumber, takeawayNumber));
       };
 

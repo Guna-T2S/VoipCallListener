@@ -1,6 +1,4 @@
 import axios from 'axios';
-import reactotron from '../config/ReactotronConfig';
-import { Alert } from 'react-native';
 
 const WEBHOOK_BASE_URL = 'https://falcon-direct.t2sonline.com/event/hook';
 
@@ -19,7 +17,6 @@ export const sendCallToWebhook = async (phoneNumber, takeawayNumber) => {
   const webhookUrl = `${WEBHOOK_BASE_URL}?from=${encodeURIComponent(
     from,
   )}&to=${encodeURIComponent(to)}`;
-  reactotron.log('webhookUrl', webhookUrl);
 
   const response = await axios.get(webhookUrl, {
     timeout: 10000,

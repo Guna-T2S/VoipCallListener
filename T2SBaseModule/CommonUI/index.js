@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, TextInput, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const T2SButton = ({ buttonStyle, buttonTextStyle, onPress, disabled, children, ...props }) => (
     <TouchableOpacity style={buttonStyle} onPress={onPress} disabled={disabled}>

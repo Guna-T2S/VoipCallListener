@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.fh.voipcalllistener"
+    namespace "com.fh.foodhubcallerid"
     defaultConfig {
-        applicationId "com.fh.voipcalllistener"
+        applicationId "com.fh.foodhubcallerid"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

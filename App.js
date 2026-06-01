@@ -1,9 +1,11 @@
 import React, {useEffect, useState} from 'react';
-import {View, ActivityIndicator, StyleSheet, StatusBar} from 'react-native';
+import {Image, StyleSheet, StatusBar} from 'react-native';
 import {Provider} from 'react-redux';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import store, {restoreSession} from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
+
+const splashImage = require('./assets/splash_screen.png');
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -15,10 +17,8 @@ export default function App() {
   if (!isReady) {
     return (
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" />
-        <View style={styles.splash}>
-          <ActivityIndicator size="large" color="#fff" />
-        </View>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <Image source={splashImage} style={styles.splash} resizeMode="cover" />
       </SafeAreaProvider>
     );
   }
@@ -34,5 +34,9 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  splash: {flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center'},
+  splash: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
 });

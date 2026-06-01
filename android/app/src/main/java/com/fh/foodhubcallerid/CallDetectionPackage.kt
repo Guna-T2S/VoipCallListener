@@ -1,4 +1,4 @@
-package com.fh.voipcalllistener
+package com.fh.foodhubcallerid
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule

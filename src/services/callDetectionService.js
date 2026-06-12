@@ -7,12 +7,12 @@ const {CallDetection} = NativeModules;
  * Starts listening for incoming calls on both platforms.
  *
  * Android:
- *   CallBroadcastReceiver.kt (static manifest receiver) fires on RINGING state
- *   and emits 'onIncomingCall' directly into the running JS bridge via
- *   DeviceEventEmitter. No foreground service is involved — this avoids
- *   ForegroundServiceStartNotAllowedException on API 31+ which fires when the
- *   incoming-call screen overlays the app and Android demotes it to background.
- *   If the bridge is not running (app killed), Kotlin sends the webhook directly.
+ *   CallScreeningServiceImpl.kt is bound by the OS Telecom framework for every
+ *   incoming call once the user grants the call-screening role. It reads the
+ *   caller number from Call.Details.getHandle() (no Call Log / Phone
+ *   permissions) and emits 'onIncomingCall' into the running JS bridge via
+ *   DeviceEventEmitter. If the bridge is not running (app killed), the service
+ *   sends the webhook natively.
  *
  * iOS:
  *   CallDetectionModule.swift starts a CXCallObserver and emits 'onIncomingCall'

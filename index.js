@@ -13,10 +13,7 @@ enableScreens();
 
 AppRegistry.registerComponent(appName, () => App);
 
-// HeadlessJS task — runs sendCallToWebhook when the app is killed and a call
-// comes in. Started by CallBroadcastReceiver via CallDetectionTaskService.
-AppRegistry.registerHeadlessTask('CallDetectionTask', () => async ({ phoneNumber, takeawayNumber }) => {
-  if (!phoneNumber || !takeawayNumber) return;
-  const { sendCallToWebhook } = require('./src/services/webhookService');
-  await sendCallToWebhook(phoneNumber, takeawayNumber);
-});
+// NOTE: The Android killed-state webhook is now handled natively inside
+// CallScreeningServiceImpl (the OS binds it and starts the process for every
+// incoming call once the call-screening role is granted), so the previous
+// HeadlessJS "CallDetectionTask" is no longer registered or needed.

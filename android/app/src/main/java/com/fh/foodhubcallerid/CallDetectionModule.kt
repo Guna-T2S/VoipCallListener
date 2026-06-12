@@ -1,13 +1,10 @@
 package com.fh.foodhubcallerid
 
-import android.content.Context
+import android.app.role.RoleManager
 import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.telephony.TelephonyManager
-import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -20,14 +17,15 @@ import java.lang.ref.WeakReference
  * React Native native module.
  *
  * For iOS: JS calls startListening() to begin CXCallObserver.
- * For Android: used only as a static bridge so CallBroadcastReceiver can
- *   emit 'onIncomingCall' to the live JS context without a foreground service.
+ * For Android: a static bridge so CallScreeningServiceImpl can emit
+ *   'onIncomingCall' to the live JS context, plus the JS-facing helpers to
+ *   request and check the call-screening role.
  */
 class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
     init {
-        // Keep a weak reference so CallBroadcastReceiver can emit events
+        // Keep a weak reference so CallScreeningServiceImpl can emit events
         // without holding a strong ref that would prevent GC.
         instanceRef = WeakReference(this)
     }
@@ -40,8 +38,10 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
 
         fun canDeliverToJs(): Boolean = jsListenerActive && instanceRef?.get() != null
 
+        const val ROLE_REQUEST_CODE = 4711
+
         /**
-         * Called by CallBroadcastReceiver to push an incoming-call event into
+         * Called by CallScreeningServiceImpl to push an incoming-call event into
          * the running JS layer. Returns true if the bridge was available and
          * the event was emitted; false means the app is killed / bridge not ready.
          */
@@ -65,12 +65,13 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     override fun getName(): String = "CallDetection"
 
     // startListening / stopListening are used only by iOS (CXCallObserver).
-    // On Android the static BroadcastReceiver in the manifest handles detection.
+    // On Android, detection is handled by CallScreeningServiceImpl once the
+    // user grants the call-screening role.
 
     @ReactMethod
     fun startListening() {
         // iOS implementation is in CallDetectionModule.swift.
-        // No-op on Android — manifest receiver is always active.
+        // No-op on Android — the OS binds CallScreeningServiceImpl automatically.
     }
 
     @ReactMethod
@@ -90,24 +91,74 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun setTakeawayNumber(number: String) {
+        // Persist so CallScreeningServiceImpl can fire the webhook natively when
+        // the app is killed. No foreground service is needed — the OS binds the
+        // call-screening service (and starts the process) for every incoming call.
         CallListenerStorage.setTakeawayNumber(reactContext, number)
-        ContextCompat.startForegroundService(
-            reactContext,
-            Intent(reactContext, CallListenerForegroundService::class.java),
-        )
     }
 
     @ReactMethod
     fun clearTakeawayNumber() {
         CallListenerStorage.clearTakeawayNumber(reactContext)
-        reactContext.stopService(
-            Intent(reactContext, CallListenerForegroundService::class.java),
-        )
     }
 
     @ReactMethod
     fun setCountryIso(iso: String) {
         CallListenerStorage.setCountryIso(reactContext, iso)
+    }
+
+    // ─── Call-screening role (Android 10+, the compliant caller-ID path) ───────
+
+    /**
+     * Resolves true if this app currently holds the call-screening role, i.e.
+     * it is the user's selected Caller ID & spam app. Always false below API 29.
+     */
+    @ReactMethod
+    fun isCallScreeningRoleHeld(promise: Promise) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            promise.resolve(false)
+            return
+        }
+        val rm = reactContext.getSystemService(RoleManager::class.java)
+        val held = rm != null &&
+            rm.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) &&
+            rm.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
+        promise.resolve(held)
+    }
+
+    /**
+     * Launches the system dialog asking the user to make this app the Caller ID
+     * & spam app (the call-screening role). Resolves true if the request dialog
+     * was shown. The screen polls isCallScreeningRoleHeld() afterwards to detect
+     * the outcome. Rejects on unsupported OS versions or when no activity exists.
+     */
+    @ReactMethod
+    fun requestCallScreeningRole(promise: Promise) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            promise.reject("UNSUPPORTED", "Call screening role requires Android 10 (API 29) or higher")
+            return
+        }
+        val activity = currentActivity
+        if (activity == null) {
+            promise.reject("NO_ACTIVITY", "No foreground activity to launch the role request")
+            return
+        }
+        val rm = reactContext.getSystemService(RoleManager::class.java)
+        if (rm == null || !rm.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING)) {
+            promise.reject("ROLE_UNAVAILABLE", "Call screening role is not available on this device")
+            return
+        }
+        if (rm.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+            promise.resolve(true)
+            return
+        }
+        try {
+            val intent = rm.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+            activity.startActivityForResult(intent, ROLE_REQUEST_CODE)
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("REQUEST_FAILED", e.message, e)
+        }
     }
 
     /** Resolves true if SYSTEM_ALERT_WINDOW is already granted. */

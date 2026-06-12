@@ -3,29 +3,23 @@
     <!-- Network access for webhook calls -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Read phone state to detect incoming calls -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-
-    <!-- Caller ID on Android 8+ (API 26+) -->
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <!--
+      Draw over other apps — lets us show an incoming-call banner on the lock
+      screen and over third-party apps. This is a special, user-granted
+      permission (not part of the restricted Phone / Call Log groups) and is
+      toggled manually by the user in system settings.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!--
-      READ_CALL_LOG is required on Android 10+ (API 29+) to obtain the incoming
-      caller number from TelephonyManager.EXTRA_INCOMING_NUMBER.
+      NOTE (Google Play "Permissions and APIs that Access Sensitive Information"
+      compliance): This app does NOT request READ_CALL_LOG, READ_PHONE_STATE or
+      READ_PHONE_NUMBERS. The incoming caller number is obtained from the
+      CallScreeningService API (Call.Details.getHandle()), which requires the
+      app to hold the user-granted call-screening role (RoleManager
+      .ROLE_CALL_SCREENING). This is the supported "default handler capability"
+      for caller-ID apps and needs no restricted Call Log / Phone permissions.
     -->
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
-
-    <!-- Allow auto-start after device reboot -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!-- Required to run a foreground service (keeps process alive when app is killed) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Android 14+ requires per-type permission for foreground services -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-
-    <!-- Draw over other apps — lets us show an incoming-call banner on the lock screen
-         and over third-party apps. User must grant this manually in system settings. -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
       android:name=".MainApplication"
@@ -51,50 +45,26 @@
       </activity>
 
       <!--
-        Static BroadcastReceiver: always active, fires on PHONE_STATE changes.
-        android:exported="true" is required so the OS can deliver the broadcast.
-      -->
-      <receiver
-        android:name=".CallBroadcastReceiver"
-        android:exported="true">
-        <intent-filter>
-          <action android:name="android.intent.action.PHONE_STATE" />
-        </intent-filter>
-      </receiver>
+        Call-screening service. When the user grants this app the call-screening
+        role, the system binds this service for every incoming call and delivers
+        the caller number via Call.Details.getHandle() — with NO Call Log or
+        Phone permissions. We allow the call through unchanged and use the number
+        only to show the caller-ID banner and notify the takeaway webhook.
 
-      <!-- Restarts call listening after device reboot -->
-      <receiver
-        android:name=".BootReceiver"
-        android:exported="true">
-        <intent-filter>
-          <action android:name="android.intent.action.BOOT_COMPLETED" />
-          <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-        </intent-filter>
-      </receiver>
-
-      <!--
-        Persistent foreground service. Keeps the process alive after the app is
-        swiped away so CallBroadcastReceiver can send webhooks without needing to
-        cold-start the process.
+        BIND_SCREENING_SERVICE ensures only the OS Telecom framework can bind it.
       -->
       <service
-        android:name=".CallListenerForegroundService"
-        android:foregroundServiceType="dataSync"
-        android:exported="false" />
+        android:name=".CallScreeningServiceImpl"
+        android:permission="android.permission.BIND_SCREENING_SERVICE"
+        android:exported="true">
+        <intent-filter>
+          <action android:name="android.telecom.CallScreeningService" />
+        </intent-filter>
+      </service>
 
       <!-- Floating overlay shown over the incoming-call screen. Requires SYSTEM_ALERT_WINDOW. -->
       <service
         android:name=".CallOverlayService"
-        android:exported="false" />
-
-      <!--
-        HeadlessJS service: starts a JS context in the background so that
-        sendCallToWebhook (callSaga) can run even when the app is killed.
-        foregroundServiceType="dataSync" is required on Android 10+.
-      -->
-      <service
-        android:name=".CallDetectionTaskService"
-        android:foregroundServiceType="dataSync"
         android:exported="false" />
 
     </application>

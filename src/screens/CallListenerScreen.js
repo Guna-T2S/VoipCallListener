@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   Platform,
-  PermissionsAndroid,
   TouchableOpacity,
   NativeModules,
-  Linking,
 } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -27,33 +25,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { CallDetection } = NativeModules;
 
-const REQUIRED_PHONE_PERMISSIONS = [
-  PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
-  PermissionsAndroid.PERMISSIONS.READ_CALL_LOG,
-];
+// ─── Call-screening role (Android only) ─────────────────────────────────────
+// The caller number is obtained from the CallScreeningService API, which
+// requires this app to be the user's selected "Caller ID & spam" app. This
+// replaces the old READ_CALL_LOG / READ_PHONE_STATE permissions, which Google
+// Play restricts to default Phone / Assistant apps.
 
-const checkRequiredPhonePermissions = async () => {
+const checkCallScreeningRole = async () => {
   if (Platform.OS !== 'android') return true;
-  const results = await Promise.all(
-    REQUIRED_PHONE_PERMISSIONS.map(p => PermissionsAndroid.check(p)),
-  );
-  return results.every(Boolean);
+  try {
+    return await CallDetection?.isCallScreeningRoleHeld?.();
+  } catch {
+    return false;
+  }
 };
 
-// ─── Permission request (Android only) ──────────────────────────────────────
-
-const requestAndroidPermissions = async () => {
+const requestCallScreeningRole = async () => {
   if (Platform.OS !== 'android') return true;
-
-  const permissions = [...REQUIRED_PHONE_PERMISSIONS];
-  if (Platform.Version >= 26 && PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS) {
-    permissions.push(PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS);
+  try {
+    await CallDetection?.requestCallScreeningRole?.();
+    return true;
+  } catch {
+    return false;
   }
-
-  const results = await PermissionsAndroid.requestMultiple(permissions);
-  return Object.values(results).every(
-    r => r === PermissionsAndroid.RESULTS.GRANTED,
-  );
 };
 
 export default function CallListenerScreen() {
@@ -64,7 +58,7 @@ export default function CallListenerScreen() {
   const cleanupRef = useRef(null);
   const [takeawayNumber, setTakeawayNumber] = useState(null);
   const [overlayGranted, setOverlayGranted] = useState(true);
-  const [phonePermissionsGranted, setPhonePermissionsGranted] = useState(true);
+  const [roleGranted, setRoleGranted] = useState(true);
   const [versionLabel, setVersionLabel] = useState('');
 
   useEffect(() => {
@@ -79,18 +73,18 @@ export default function CallListenerScreen() {
       .catch(() => {});
   }, []);
 
-  // Re-check overlay and phone permissions when the user returns from Settings.
+  // Re-check overlay permission and the call-screening role when the user
+  // returns from the system dialog / settings.
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const checkOverlay = () =>
       CallDetection?.canDrawOverlays?.()
         .then(granted => setOverlayGranted(granted))
         .catch(() => {});
-    const checkPhone = () =>
-      checkRequiredPhonePermissions().then(setPhonePermissionsGranted);
+    const checkRole = () => checkCallScreeningRole().then(setRoleGranted);
     const check = () => {
       checkOverlay();
-      checkPhone();
+      checkRole();
     };
     check();
     const interval = setInterval(check, 2000);
@@ -112,7 +106,7 @@ export default function CallListenerScreen() {
     }
   }, [callCenterConfig, activeStoreId]);
 
-  // Persist for native killed-state webhook (Android BroadcastReceiver).
+  // Persist for the native killed-state webhook (CallScreeningServiceImpl).
   useEffect(() => {
     if (takeawayNumber) {
       persistTakeawayNumberForNative(takeawayNumber);
@@ -131,9 +125,13 @@ export default function CallListenerScreen() {
     let mounted = true;
 
     const init = async () => {
-      const granted = await requestAndroidPermissions();
-      const requiredGranted = await checkRequiredPhonePermissions();
-      if (mounted) setPhonePermissionsGranted(requiredGranted);
+      // Ask the user to make this the Caller ID app if it isn't already.
+      let granted = await checkCallScreeningRole();
+      if (!granted) {
+        await requestCallScreeningRole();
+        granted = await checkCallScreeningRole();
+      }
+      if (mounted) setRoleGranted(granted);
       if (!granted || !mounted) return;
 
       const handleIncomingCall = (phoneNo) => {
@@ -155,7 +153,7 @@ export default function CallListenerScreen() {
   }, [dispatch, takeawayNumber]);
 
   const listeningActive =
-    Platform.OS !== 'android' || phonePermissionsGranted;
+    Platform.OS !== 'android' || roleGranted;
   const statusColor = !listeningActive
     ? '#FF9800'
     : {
@@ -187,15 +185,17 @@ export default function CallListenerScreen() {
         </TouchableOpacity>
       </View>
 
-      {Platform.OS === 'android' && !phonePermissionsGranted && (
+      {Platform.OS === 'android' && !roleGranted && (
         <TouchableOpacity
           style={styles.warningBanner}
-          onPress={() => Linking.openSettings()}
+          onPress={() => CallDetection?.requestCallScreeningRole?.()}
         >
           <Text style={styles.warningBannerText}>
-            Phone and call log access are required to detect incoming calls
+            Set Foodhub as your Caller ID app to show incoming takeaway calls.
+            We use the caller number only to display the caller and notify your
+            store — we never read your call history or block calls.
           </Text>
-          <Text style={styles.warningBannerAction}>Tap to open Settings</Text>
+          <Text style={styles.warningBannerAction}>Tap to set as Caller ID app</Text>
         </TouchableOpacity>
       )}
 

@@ -19,7 +19,7 @@ import CallKit
  * expose the caller number of GSM calls to third-party apps for privacy
  * reasons. The module sends whatever identifier is available from CXCall.
  */
-@objc(CallDetectionModule)
+@objc(CallDetection)
 class CallDetectionModule: NSObject, CXCallObserverDelegate {
 
     private var callObserver: CXCallObserver?

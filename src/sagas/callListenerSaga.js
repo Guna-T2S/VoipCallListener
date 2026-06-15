@@ -2,6 +2,7 @@ import {call, put, takeLatest} from '@redux-saga/core/effects';
 import axios from 'axios';
 import {
     CALL_ACTIONS,
+    fetchCallCenterConfigRequest,
     fetchCallCenterConfigSuccess,
     fetchCallCenterConfigFailure,
 } from '../actions/callActions';
@@ -10,6 +11,7 @@ const CALL_CENTER_CONFIG_URL =
     'https://api.t2sonline.com/lang/mobile/myt/featuregate/config/callcenter.json';
 
 function* fetchCallCenterConfig() {
+    yield put(fetchCallCenterConfigRequest());
     try {
         const response = yield call(axios.get, CALL_CENTER_CONFIG_URL);
         yield put(fetchCallCenterConfigSuccess(response.data));

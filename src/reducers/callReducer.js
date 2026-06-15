@@ -7,6 +7,8 @@ const initialState = {
   lastError: null,
   callHistory: [],
   callCenterConfig: null,
+  configLoading: false,
+  configError: null,
 };
 
 const callReducer = (state = initialState, action) => {
@@ -64,10 +66,27 @@ const callReducer = (state = initialState, action) => {
         webhookStatus: 'idle',
       };
 
+    case CALL_ACTIONS.FETCH_CALL_CENTER_CONFIG_REQUEST:
+      return {
+        ...state,
+        configLoading: true,
+        configError: null,
+      };
+
     case CALL_ACTIONS.FETCH_CALL_CENTER_CONFIG_SUCCESS:
       return {
         ...state,
         callCenterConfig: action.payload,
+        configLoading: false,
+        configError: null,
+      };
+
+    case CALL_ACTIONS.FETCH_CALL_CENTER_CONFIG_FAILURE:
+      return {
+        ...state,
+        callCenterConfig: null,
+        configLoading: false,
+        configError: action.payload,
       };
 
     default:

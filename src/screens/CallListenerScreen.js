@@ -25,6 +25,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { CallDetection } = NativeModules;
 
+const ANDROID_CALL_SCREENING_MIN_API = 29;
+
+const isAndroidCallScreeningSupported = () =>
+  Platform.OS !== 'android' || Platform.Version >= ANDROID_CALL_SCREENING_MIN_API;
+
 // ─── Call-screening role (Android only) ─────────────────────────────────────
 // The caller number is obtained from the CallScreeningService API, which
 // requires this app to be the user's selected "Caller ID & spam" app. This
@@ -58,7 +63,9 @@ export default function CallListenerScreen() {
   const cleanupRef = useRef(null);
   const [takeawayNumber, setTakeawayNumber] = useState(null);
   const [overlayGranted, setOverlayGranted] = useState(true);
-  const [roleGranted, setRoleGranted] = useState(true);
+  const [roleGranted, setRoleGranted] = useState(
+    Platform.OS !== 'android' || isAndroidCallScreeningSupported(),
+  );
   const [versionLabel, setVersionLabel] = useState('');
 
   useEffect(() => {
@@ -76,31 +83,38 @@ export default function CallListenerScreen() {
   // Re-check overlay permission and the call-screening role when the user
   // returns from the system dialog / settings.
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== 'android' || !isAndroidCallScreeningSupported()) return;
     const checkOverlay = () =>
       CallDetection?.canDrawOverlays?.()
         .then(granted => setOverlayGranted(granted))
         .catch(() => {});
-    const checkRole = () => checkCallScreeningRole().then(setRoleGranted);
+    const checkRole = () => checkCallScreeningRole().then(granted => {
+      console.log('[CallListener] role check:', granted);
+      setRoleGranted(granted);
+    });
     const check = () => {
       checkOverlay();
       checkRole();
     };
     check();
-    const interval = setInterval(check, 2000);
-    return () => clearInterval(interval);
+    // const interval = setInterval(check, 2000);
+    // return () => clearInterval(interval);
   }, []);
 
   const callCenterConfig = callState.callCenterConfig;
   const activeStoreId = authState.activeStore?.store_id;
 
   useEffect(() => {
-    if (!callCenterConfig || !activeStoreId) return;
+    if (!callCenterConfig || !activeStoreId) {
+      console.log('[CallListener] config not ready:', { hasConfig: !!callCenterConfig, activeStoreId });
+      return;
+    }
     const match = callCenterConfig.find(
       item => String(item.id) === String(activeStoreId),
     );
-    if (match) {
-      setTakeawayNumber(match.number);
+    console.log('[CallListener] config match:', match, 'storeId:', activeStoreId);
+    if (match?.number) {
+      setTakeawayNumber(String(match.number));
     } else {
       setTakeawayNumber(null);
     }
@@ -115,45 +129,48 @@ export default function CallListenerScreen() {
     }
   }, [takeawayNumber]);
 
+  // Request the call-screening role once whenever takeawayNumber becomes available.
+  // Role grant/deny is detected by the polling interval above; this effect only
+  // triggers the one-time ask.
   useEffect(() => {
+    if (Platform.OS !== 'android' || !takeawayNumber || !isAndroidCallScreeningSupported()) return;
+    let mounted = true;
+    checkCallScreeningRole().then(granted => {
+      if (!granted && mounted) requestCallScreeningRole();
+    });
+    return () => { mounted = false; };
+  }, [takeawayNumber]);
+
+  // Start the DeviceEventEmitter subscription whenever takeawayNumber is available.
+  // Not gated on roleGranted — the native CallScreeningService decides whether to
+  // emit; JS just needs to be ready to receive.
+  useEffect(() => {
+    console.log('[CallListener] listener effect:', { takeawayNumber });
     if (!takeawayNumber) {
       cleanupRef.current?.();
       cleanupRef.current = null;
       return undefined;
     }
 
-    let mounted = true;
-
-    const init = async () => {
-      // Ask the user to make this the Caller ID app if it isn't already.
-      let granted = await checkCallScreeningRole();
-      if (!granted) {
-        await requestCallScreeningRole();
-        granted = await checkCallScreeningRole();
-      }
-      if (mounted) setRoleGranted(granted);
-      if (!granted || !mounted) return;
-
-      const handleIncomingCall = (phoneNo) => {
-        const {phoneNumber} = parseCallerInfo(phoneNo, storeCountryCode);
-        
-        dispatch(incomingCallDetected(phoneNumber, takeawayNumber));
-      };
-
-      cleanupRef.current = startCallDetection(handleIncomingCall);
+    console.log('[CallListener] starting call detection');
+    const handleIncomingCall = (phoneNo) => {
+      console.log('[CallListener] incoming call received:', phoneNo);
+      const {phoneNumber} = parseCallerInfo(phoneNo, storeCountryCode);
+      dispatch(incomingCallDetected(phoneNumber, takeawayNumber));
     };
 
-    init();
+    cleanupRef.current = startCallDetection(handleIncomingCall);
 
     return () => {
-      mounted = false;
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [dispatch, takeawayNumber]);
+  }, [dispatch, takeawayNumber, storeCountryCode]);
 
   const listeningActive =
-    Platform.OS !== 'android' || roleGranted;
+    (Platform.OS !== 'android' || roleGranted) && isAndroidCallScreeningSupported();
+  const configError = callState.configError;
+  const configLoading = callState.configLoading;
   const statusColor = !listeningActive
     ? '#FF9800'
     : {
@@ -185,7 +202,17 @@ export default function CallListenerScreen() {
         </TouchableOpacity>
       </View>
 
-      {Platform.OS === 'android' && !roleGranted && (
+      {Platform.OS === 'android' && !isAndroidCallScreeningSupported() && (
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningBannerText}>
+            Call Listener requires Android 10 or later. This device is running
+            Android {Platform.Version}, which does not support the Caller ID
+            screening API.
+          </Text>
+        </View>
+      )}
+
+      {Platform.OS === 'android' && isAndroidCallScreeningSupported() && !roleGranted && (
         <TouchableOpacity
           style={styles.warningBanner}
           onPress={() => CallDetection?.requestCallScreeningRole?.()}
@@ -200,7 +227,7 @@ export default function CallListenerScreen() {
       )}
 
       {/* Overlay permission nudge — only shown when permission is missing */}
-      {Platform.OS === 'android' && !overlayGranted && (
+      {Platform.OS === 'android' && isAndroidCallScreeningSupported() && !overlayGranted && (
         <TouchableOpacity
           style={styles.warningBanner}
           onPress={() => CallDetection?.requestOverlayPermission?.()}>
@@ -211,7 +238,21 @@ export default function CallListenerScreen() {
         </TouchableOpacity>
       )}
 
-      {!takeawayNumber ? (
+      {configError ? (
+        <View style={styles.infoTextContainer}>
+          <Text style={styles.errorText}>Could not load call center config</Text>
+          <Text style={styles.errorDetail}>{configError}</Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => dispatch(callListenerScreenLoaded())}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : configLoading && !callCenterConfig ? (
+        <View style={styles.infoTextContainer}>
+          <Text style={styles.infoText}>Loading configuration...</Text>
+        </View>
+      ) : !takeawayNumber ? (
         <View style={styles.infoTextContainer}>
           <Text style={styles.infoText}>Contact foodhub to activate</Text>
         </View>
@@ -340,6 +381,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  errorText: {
+    color: '#F44336',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorDetail: {
+    color: '#aaa',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   warningBanner: {
     backgroundColor: '#7C4700',

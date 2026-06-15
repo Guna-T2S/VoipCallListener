@@ -30,12 +30,15 @@ class CallScreeningServiceImpl : CallScreeningService() {
         private const val TAG = "CallScreeningSvc"
         private const val WEBHOOK_BASE_URL = "https://falcon-direct.t2sonline.com/event/hook"
         private const val DEDUPE_MS = 3_000L
+        private const val WEBHOOK_TIMEOUT_MS = 12_000
 
         @Volatile private var lastCaller = ""
         @Volatile private var lastWebhookAt = 0L
     }
 
     override fun onScreenCall(callDetails: Call.Details) {
+        Log.d(TAG, "onScreenCall invoked — direction=${callDetails.callDirection} handle=${callDetails.handle}")
+
         // 1. Always allow the call through unchanged. Empty builder = no block,
         //    no reject, no silence, no skipping notification.
         respondToCall(callDetails, CallResponse.Builder().build())
@@ -43,7 +46,7 @@ class CallScreeningServiceImpl : CallScreeningService() {
         // 2. Only act on incoming calls (callDirection is API 29+; the role that
         //    triggers this service is also API 29+, so this is safe).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            callDetails.callDirection != Call.Details.DIRECTION_INCOMING
+            callDetails.callDirection == Call.Details.DIRECTION_OUTGOING
         ) {
             return
         }
@@ -61,20 +64,27 @@ class CallScreeningServiceImpl : CallScreeningService() {
 
         Log.d(TAG, "Incoming call from: $phoneNumber (jsListener=${CallDetectionModule.jsListenerActive})")
 
-        // 3. Show the floating caller-ID banner over whatever is on screen.
-        showOverlay(phoneNumber)
-
-        // 4. Deliver to the live JS layer if the app is open; otherwise fire the
-        //    webhook natively. The service process is kept alive by the bind, so
-        //    a short HTTP GET on a worker thread completes reliably.
-        if (CallDetectionModule.canDeliverToJs() &&
-            CallDetectionModule.emitIncomingCall(phoneNumber)
-        ) {
-            Log.d(TAG, "Delivered to JS listener")
-            return
+        // 3. Show the floating caller-ID banner. Wrapped in try/catch so that a
+        //    failed overlay (e.g. SYSTEM_ALERT_WINDOW not granted, or Android 12+
+        //    background-service restriction) never silently aborts the webhook path.
+        try {
+            showOverlay(phoneNumber)
+        } catch (e: Exception) {
+            Log.w(TAG, "Overlay failed (non-fatal): ${e.message}")
         }
 
-        Log.d(TAG, "App killed / no JS listener — sending webhook natively")
+        // 4. Notify JS for in-app UI when the bridge is ready (non-blocking).
+        if (CallDetectionModule.canDeliverToJs()) {
+            val delivered = CallDetectionModule.emitIncomingCall(phoneNumber)
+            Log.d(
+                TAG,
+                if (delivered) "Delivered to JS listener" else "JS emit failed — native webhook still fires",
+            )
+        }
+
+        // 5. Always fire the webhook natively (authoritative path). JS skips its
+        //    own HTTP on Android to avoid duplicate requests; dedupe above
+        //    prevents rapid repeat calls from hitting the server twice.
         sendWebhookAsync(phoneNumber)
     }
 
@@ -102,8 +112,8 @@ class CallScreeningServiceImpl : CallScreeningService() {
                         "&to=${URLEncoder.encode(to, "UTF-8")}"
                 val conn = (URL(webhookUrl).openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    connectTimeout = 4_000
-                    readTimeout = 4_000
+                    connectTimeout = WEBHOOK_TIMEOUT_MS
+                    readTimeout = WEBHOOK_TIMEOUT_MS
                 }
                 val code = conn.responseCode
                 conn.disconnect()

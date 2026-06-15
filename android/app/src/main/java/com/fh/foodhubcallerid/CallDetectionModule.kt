@@ -11,7 +11,6 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import java.lang.ref.WeakReference
 
 /**
  * React Native native module.
@@ -25,18 +24,23 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
     init {
-        // Keep a weak reference so CallScreeningServiceImpl can emit events
-        // without holding a strong ref that would prevent GC.
-        instanceRef = WeakReference(this)
+        appContext = reactContext
     }
 
     companion object {
-        @Volatile private var instanceRef: WeakReference<CallDetectionModule>? = null
+        // Strong reference — ReactApplicationContext is application-scoped so
+        // holding it here does not cause a leak, and avoids the GC-under-pressure
+        // problem a WeakReference would introduce.
+        @Volatile private var appContext: ReactApplicationContext? = null
 
         /** True while the JS call-listener screen is mounted and ready to receive events. */
         @Volatile var jsListenerActive = false
 
-        fun canDeliverToJs(): Boolean = jsListenerActive && instanceRef?.get() != null
+        fun canDeliverToJs(): Boolean {
+            val ready = jsListenerActive && appContext != null
+            android.util.Log.d("CallDetectionModule", "canDeliverToJs: jsListenerActive=$jsListenerActive hasContext=${appContext != null} -> $ready")
+            return ready
+        }
 
         const val ROLE_REQUEST_CODE = 4711
 
@@ -46,13 +50,15 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
          * the event was emitted; false means the app is killed / bridge not ready.
          */
         fun emitIncomingCall(phoneNumber: String): Boolean {
-            val module = instanceRef?.get() ?: return false
+            val ctx = appContext ?: run {
+                android.util.Log.w("CallDetectionModule", "emitIncomingCall: no context — bridge not ready")
+                return false
+            }
             return try {
                 val params = Arguments.createMap().apply {
                     putString("phoneNumber", phoneNumber)
                 }
-                module.reactApplicationContext
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                     .emit("onIncomingCall", params)
                 true
             } catch (e: Exception) {

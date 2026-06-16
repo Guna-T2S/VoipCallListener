@@ -6,10 +6,6 @@
     <!-- Read phone state to detect incoming calls -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
-    <!-- Caller ID — only needed on API 26+ where the permission was introduced -->
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS"
-        android:minSdkVersion="26" />
-
     <!--
       READ_CALL_LOG is required on Android 10+ (API 29+) to obtain the incoming
       caller number from TelephonyManager.EXTRA_INCOMING_NUMBER.

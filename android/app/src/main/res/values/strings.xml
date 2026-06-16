@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Foodhub Caller ID</string>
+    <string name="app_description">Foodhub Caller ID detects incoming calls for restaurant operators and notifies the Foodhub platform in real time. Requires phone access to identify customer callers.</string>
 </resources>

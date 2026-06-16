@@ -6,14 +6,17 @@
     <!-- Read phone state to detect incoming calls -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
-    <!-- Caller ID on Android 8+ (API 26+) -->
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <!-- Caller ID — only needed on API 26+ where the permission was introduced -->
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS"
+        android:minSdkVersion="26" />
 
     <!--
       READ_CALL_LOG is required on Android 10+ (API 29+) to obtain the incoming
       caller number from TelephonyManager.EXTRA_INCOMING_NUMBER.
+      Not needed on API 28 and below where READ_PHONE_STATE is sufficient.
     -->
-    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG"
+        android:minSdkVersion="29" />
 
     <!-- Allow auto-start after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -21,7 +24,7 @@
     <!-- Required to run a foreground service (keeps process alive when app is killed) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Android 14+ requires per-type permission for foreground services -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!-- Draw over other apps — lets us show an incoming-call banner on the lock screen
          and over third-party apps. User must grant this manually in system settings. -->
@@ -30,6 +33,7 @@
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
+      android:description="@string/app_description"
       android:icon="@mipmap/ic_launcher"
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
@@ -79,8 +83,12 @@
       -->
       <service
         android:name=".CallListenerForegroundService"
-        android:foregroundServiceType="dataSync"
-        android:exported="false" />
+        android:foregroundServiceType="dataSync|specialUse"
+        android:exported="false">
+        <property
+            android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+            android:value="Monitors incoming phone calls and sends a webhook notification to the Foodhub restaurant platform to identify customer callers." />
+      </service>
 
       <!-- Floating overlay shown over the incoming-call screen. Requires SYSTEM_ALERT_WINDOW. -->
       <service
@@ -94,8 +102,12 @@
       -->
       <service
         android:name=".CallDetectionTaskService"
-        android:foregroundServiceType="dataSync"
-        android:exported="false" />
+        android:foregroundServiceType="dataSync|specialUse"
+        android:exported="false">
+        <property
+            android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+            android:value="Background JS task that sends a webhook notification to Foodhub when an incoming call is detected while the app is not in the foreground." />
+      </service>
 
     </application>
 </manifest>

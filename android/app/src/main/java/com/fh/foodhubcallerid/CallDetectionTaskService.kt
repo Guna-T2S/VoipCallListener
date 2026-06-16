@@ -15,7 +15,7 @@ import com.facebook.react.jstasks.HeadlessJsTaskConfig
  * HeadlessJS task service that invokes the JS "CallDetectionTask" background task.
  * The JS task receives the caller phone number and dispatches to the Redux store/Saga.
  *
- * Uses foregroundServiceType="dataSync" (declared in the manifest).
+ * Uses foregroundServiceType="specialUse" (declared in the manifest).
  * "phoneCall" type is restricted to default-dialer apps on Android 14+ and must not be used.
  */
 class CallDetectionTaskService : HeadlessJsTaskService() {
@@ -33,7 +33,13 @@ class CallDetectionTaskService : HeadlessJsTaskService() {
 
         // Android 10+ (API 29): startForeground must include the service type to match
         // the foregroundServiceType declared in the manifest.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,

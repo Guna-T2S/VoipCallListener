@@ -1,4 +1,4 @@
-package com.fh.foodhubcallerid
+package com.call2pos
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -46,7 +46,7 @@ class CallListenerForegroundService : Service() {
         private const val WEBHOOK_BASE_URL =
             "https://falcon-direct.t2sonline.com/event/hook"
 
-        const val ACTION_SEND_WEBHOOK = "com.fh.foodhubcallerid.SEND_WEBHOOK"
+        const val ACTION_SEND_WEBHOOK = "com.call2pos.SEND_WEBHOOK"
         const val EXTRA_PHONE_NUMBER = "phone_number"
 
         /**

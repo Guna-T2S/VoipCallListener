@@ -1,4 +1,4 @@
-package com.fh.foodhubcallerid
+package com.call2pos
 
 import android.app.Service
 import android.content.Context
@@ -31,8 +31,8 @@ class CallOverlayService : Service() {
     companion object {
         private const val TAG = "CallOverlay"
 
-        const val ACTION_SHOW = "com.fh.foodhubcallerid.SHOW_OVERLAY"
-        const val ACTION_DISMISS = "com.fh.foodhubcallerid.DISMISS_OVERLAY"
+        const val ACTION_SHOW = "com.call2pos.SHOW_OVERLAY"
+        const val ACTION_DISMISS = "com.call2pos.DISMISS_OVERLAY"
         const val EXTRA_PHONE_NUMBER = "phone_number"
     }
 

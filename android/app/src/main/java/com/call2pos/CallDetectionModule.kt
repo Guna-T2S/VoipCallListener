@@ -1,4 +1,4 @@
-package com.fh.foodhubcallerid
+package com.call2pos
 
 import android.content.Context
 import android.content.Intent

@@ -11,7 +11,7 @@
 -dontwarn kotlin.**
 
 # App native modules and services
--keep class com.fh.foodhubcallerid.** { *; }
+-keep class com.call2pos.** { *; }
 
 # Keep JS-callable native module method names
 -keepclassmembers class * extends com.facebook.react.bridge.ReactContextBaseJavaModule {

@@ -135,18 +135,17 @@ class CallBroadcastReceiver : BroadcastReceiver() {
     }
 
     private fun sendWebhook(context: Context, phoneNumber: String) {
-        val takeawayNumber = CallListenerStorage.getTakeawayNumber(context)
-        if (takeawayNumber == null) {
-            Log.w(TAG, "No takeaway number configured — open Call Listener once after login")
+        val storeId = CallListenerStorage.getStoreId(context)
+        if (storeId == null) {
+            Log.w(TAG, "No store id configured — open Call Listener once after login")
             return
         }
 
         try {
             val from = sanitizePhone(phoneNumber)
-            val to = sanitizePhone(takeawayNumber)
             val webhookUrl =
                 "$WEBHOOK_BASE_URL?from=${URLEncoder.encode(from, "UTF-8")}" +
-                    "&to=${URLEncoder.encode(to, "UTF-8")}"
+                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}"
 
             // 4 s each → 8 s worst-case, comfortably within goAsync()'s 10 s budget.
             val conn = (URL(webhookUrl).openConnection() as HttpURLConnection).apply {

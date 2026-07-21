@@ -9,7 +9,7 @@ import androidx.core.content.ContextCompat
  * Re-starts the foreground service after device reboot so call detection
  * resumes without the user having to open the app.
  *
- * Only acts if a takeaway number was previously saved, which means the user
+ * Only acts if a store id was previously saved, which means the user
  * had an active store configured before the reboot.
  */
 class BootReceiver : BroadcastReceiver() {
@@ -18,7 +18,7 @@ class BootReceiver : BroadcastReceiver() {
             intent.action != "android.intent.action.QUICKBOOT_POWERON"
         ) return
 
-        if (CallListenerStorage.getTakeawayNumber(context) == null) return
+        if (CallListenerStorage.getStoreId(context) == null) return
 
         ContextCompat.startForegroundService(
             context,

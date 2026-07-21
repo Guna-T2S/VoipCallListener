@@ -54,12 +54,12 @@ class CallDetectionTaskService : HeadlessJsTaskService() {
         val phoneNumber = intent?.getStringExtra("phoneNumber")
             ?.takeIf { it.isNotBlank() } ?: return null
 
-        // Read the persisted takeaway number so the JS task can call sendCallToWebhook.
-        val takeawayNumber = CallListenerStorage.getTakeawayNumber(this) ?: return null
+        // Read the persisted store id so the JS task can call sendCallToWebhook.
+        val storeId = CallListenerStorage.getStoreId(this) ?: return null
 
         val taskData = Arguments.createMap().apply {
             putString("phoneNumber", phoneNumber)
-            putString("takeawayNumber", takeawayNumber)
+            putString("storeId", storeId)
         }
 
         return HeadlessJsTaskConfig(

@@ -11,14 +11,11 @@ import {
 } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  incomingCallDetected,
-  callListenerScreenLoaded,
-} from '../actions/callActions';
+import { incomingCallDetected } from '../actions/callActions';
 import { startCallDetection } from '../services/callDetectionService';
 import {
-  persistTakeawayNumberForNative,
-  clearTakeawayNumberForNative,
+  persistStoreIdForNative,
+  clearStoreIdForNative,
 } from '../services/callListenerNativeStorage';
 import { onLogoutAction } from 'appmodules/AuthModule/Redux/AuthActions';
 import { parseCallerInfo } from '../utils/phoneUtils';
@@ -68,7 +65,6 @@ export default function CallListenerScreen() {
   const storeCountryCode = useSelector(state => state.appState?.countryConfigResponse?.country?.iso);
   const cleanupRef = useRef(null);
   const phonePermissionModalResolveRef = useRef(null);
-  const [takeawayNumber, setTakeawayNumber] = useState(null);
   const [overlayGranted, setOverlayGranted] = useState(true);
   const [phonePermissionsGranted, setPhonePermissionsGranted] = useState(true);
   const [showPhonePermissionModal, setShowPhonePermissionModal] = useState(false);
@@ -93,10 +89,6 @@ export default function CallListenerScreen() {
     setShowOverlayPermissionModal(false);
     CallDetection?.requestOverlayPermission?.();
   };
-
-  useEffect(() => {
-    dispatch(callListenerScreenLoaded());
-  }, [dispatch]);
 
   useEffect(() => {
     Promise.all([getVersion(), getBuildNumber()])
@@ -124,32 +116,19 @@ export default function CallListenerScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  const callCenterConfig = callState.callCenterConfig;
   const activeStoreId = authState.activeStore?.store_id;
-
-  useEffect(() => {
-    if (!callCenterConfig || !activeStoreId) return;
-    const match = callCenterConfig.find(
-      item => String(item.id) === String(activeStoreId),
-    );
-    if (match) {
-      setTakeawayNumber(match.number);
-    } else {
-      setTakeawayNumber(null);
-    }
-  }, [callCenterConfig, activeStoreId]);
 
   // Persist for native killed-state webhook (Android BroadcastReceiver).
   useEffect(() => {
-    if (takeawayNumber) {
-      persistTakeawayNumberForNative(takeawayNumber);
+    if (activeStoreId) {
+      persistStoreIdForNative(activeStoreId);
     } else {
-      clearTakeawayNumberForNative();
+      clearStoreIdForNative();
     }
-  }, [takeawayNumber]);
+  }, [activeStoreId]);
 
   useEffect(() => {
-    if (!takeawayNumber) {
+    if (!activeStoreId) {
       cleanupRef.current?.();
       cleanupRef.current = null;
       return undefined;
@@ -165,8 +144,8 @@ export default function CallListenerScreen() {
 
       const handleIncomingCall = (phoneNo) => {
         const {phoneNumber} = parseCallerInfo(phoneNo, storeCountryCode);
-        
-        dispatch(incomingCallDetected(phoneNumber, takeawayNumber));
+
+        dispatch(incomingCallDetected(phoneNumber, activeStoreId));
       };
 
       cleanupRef.current = startCallDetection(handleIncomingCall);
@@ -179,7 +158,7 @@ export default function CallListenerScreen() {
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [dispatch, takeawayNumber]);
+  }, [dispatch, activeStoreId, storeCountryCode]);
 
   const listeningActive =
     Platform.OS !== 'android' || phonePermissionsGranted;
@@ -206,7 +185,7 @@ export default function CallListenerScreen() {
         <TouchableOpacity
           style={styles.logoutBtn}
           onPress={() => {
-            clearTakeawayNumberForNative();
+            clearStoreIdForNative();
             dispatch(onLogoutAction());
           }}
         >
@@ -239,7 +218,7 @@ export default function CallListenerScreen() {
         </TouchableOpacity>
       )}
 
-      {!takeawayNumber ? (
+      {!activeStoreId ? (
         <View style={styles.infoTextContainer}>
           <Text style={styles.infoText}>Contact foodhub to activate</Text>
         </View>

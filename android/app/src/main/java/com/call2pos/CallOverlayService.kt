@@ -68,8 +68,7 @@ class CallOverlayService : Service() {
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        val takeawayNumber = CallListenerStorage.getTakeawayNumber(this)
-        val bannerView = buildBanner(phoneNumber, takeawayNumber)
+        val bannerView = buildBanner(phoneNumber)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -102,7 +101,7 @@ class CallOverlayService : Service() {
 
     // ─── view construction ───────────────────────────────────────────────────
 
-    private fun buildBanner(phoneNumber: String, takeawayNumber: String?): LinearLayout {
+    private fun buildBanner(phoneNumber: String): LinearLayout {
         val dp = resources.displayMetrics.density
 
         val container = LinearLayout(this).apply {
@@ -129,15 +128,6 @@ class CallOverlayService : Service() {
 
         container.addView(title)
         container.addView(number)
-
-        if (!takeawayNumber.isNullOrBlank()) {
-            val store = TextView(this).apply {
-                text = "Store: $takeawayNumber"
-                setTextColor(Color.parseColor("#B3FFFFFF"))
-                textSize = 12f
-            }
-            container.addView(store)
-        }
 
         return container
     }

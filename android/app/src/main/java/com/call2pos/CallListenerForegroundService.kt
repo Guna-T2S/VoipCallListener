@@ -30,8 +30,8 @@ import java.net.URLEncoder
  *    service keeps the process alive because foreground services are protected.
  *
  * Lifecycle:
- *   Start → CallDetectionModule.setTakeawayNumber() (when user selects a store)
- *   Stop  → CallDetectionModule.clearTakeawayNumber() (on logout / store removed)
+ *   Start → CallDetectionModule.setStoreId() (when user selects a store)
+ *   Stop  → CallDetectionModule.clearStoreId() (on logout / store removed)
  *   Auto-restart after boot → BootReceiver
  *
  * START_STICKY ensures Android restarts the service if it's killed by the OS
@@ -102,17 +102,16 @@ class CallListenerForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun sendWebhook(context: Context, phoneNumber: String) {
-        val takeawayNumber = CallListenerStorage.getTakeawayNumber(context)
-        if (takeawayNumber == null) {
-            Log.w(TAG, "No takeaway number configured — skipping webhook")
+        val storeId = CallListenerStorage.getStoreId(context)
+        if (storeId == null) {
+            Log.w(TAG, "No store id configured — skipping webhook")
             return
         }
         try {
             val from = normalizeFromNumber(phoneNumber, context)
-            val to = sanitizePhone(takeawayNumber)
             val url =
                 "$WEBHOOK_BASE_URL?from=${URLEncoder.encode(from, "UTF-8")}" +
-                    "&to=${URLEncoder.encode(to, "UTF-8")}"
+                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}"
             Log.d(TAG, "Calling webhook: $url")
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"

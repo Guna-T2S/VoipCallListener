@@ -15,8 +15,8 @@ AppRegistry.registerComponent(appName, () => App);
 
 // HeadlessJS task — runs sendCallToWebhook when the app is killed and a call
 // comes in. Started by CallBroadcastReceiver via CallDetectionTaskService.
-AppRegistry.registerHeadlessTask('CallDetectionTask', () => async ({ phoneNumber, takeawayNumber }) => {
-  if (!phoneNumber || !takeawayNumber) return;
+AppRegistry.registerHeadlessTask('CallDetectionTask', () => async ({ phoneNumber, storeId }) => {
+  if (!phoneNumber || !storeId) return;
   const { sendCallToWebhook } = require('./src/services/webhookService');
-  await sendCallToWebhook(phoneNumber, takeawayNumber);
+  await sendCallToWebhook(phoneNumber, storeId);
 });

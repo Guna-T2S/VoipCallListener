@@ -89,8 +89,8 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun setTakeawayNumber(number: String) {
-        CallListenerStorage.setTakeawayNumber(reactContext, number)
+    fun setStoreId(storeId: String) {
+        CallListenerStorage.setStoreId(reactContext, storeId)
         ContextCompat.startForegroundService(
             reactContext,
             Intent(reactContext, CallListenerForegroundService::class.java),
@@ -98,8 +98,8 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun clearTakeawayNumber() {
-        CallListenerStorage.clearTakeawayNumber(reactContext)
+    fun clearStoreId() {
+        CallListenerStorage.clearStoreId(reactContext)
         reactContext.stopService(
             Intent(reactContext, CallListenerForegroundService::class.java),
         )

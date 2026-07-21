@@ -6,7 +6,6 @@ const initialState = {
   webhookStatus: 'idle', // 'idle' | 'sending' | 'success' | 'failure'
   lastError: null,
   callHistory: [],
-  callCenterConfig: null,
 };
 
 const callReducer = (state = initialState, action) => {
@@ -62,12 +61,6 @@ const callReducer = (state = initialState, action) => {
         isIncomingCall: false,
         currentCall: null,
         webhookStatus: 'idle',
-      };
-
-    case CALL_ACTIONS.FETCH_CALL_CENTER_CONFIG_SUCCESS:
-      return {
-        ...state,
-        callCenterConfig: action.payload,
       };
 
     default:

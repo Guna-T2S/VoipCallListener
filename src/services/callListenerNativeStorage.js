@@ -3,12 +3,12 @@ import store from '../store';
 
 const { CallDetection } = NativeModules;
 
-export const persistTakeawayNumberForNative = (number) => {
-  CallDetection?.setTakeawayNumber?.(String(number));
+export const persistStoreIdForNative = (storeId) => {
+  CallDetection?.setStoreId?.(String(storeId));
   const iso = store.getState()?.appState?.countryConfigResponse?.country?.iso;
   if (iso) CallDetection?.setCountryIso?.(iso);
 };
 
-export const clearTakeawayNumberForNative = () => {
-  CallDetection?.clearTakeawayNumber?.();
+export const clearStoreIdForNative = () => {
+  CallDetection?.clearStoreId?.();
 };

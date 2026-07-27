@@ -6,8 +6,6 @@ import android.content.Intent
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.content.ContextCompat
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 /**
@@ -143,19 +141,27 @@ class CallBroadcastReceiver : BroadcastReceiver() {
 
         try {
             val from = sanitizePhone(phoneNumber)
+            val sKey = WebhookSigner.buildSecurityKey(
+                storeId,
+                CallListenerStorage.getHost(context),
+                CallListenerStorage.getContactNo(context),
+            )
             val webhookUrl =
                 "$WEBHOOK_BASE_URL?from=${URLEncoder.encode(from, "UTF-8")}" +
-                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}"
+                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}" +
+                    "&s_key=${URLEncoder.encode(sKey, "UTF-8")}"
 
-            // 4 s each → 8 s worst-case, comfortably within goAsync()'s 10 s budget.
-            val conn = (URL(webhookUrl).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 4_000
-                readTimeout = 4_000
-            }
+            // Budget-constrained cold path: wait up to 5 s for a validated network,
+            // then a single 4 s send → ~9 s worst-case, within goAsync()'s ~10 s budget.
+            NetworkWaiter.awaitValidatedInternet(context, 5_000)
 
-            val code = conn.responseCode
-            conn.disconnect()
+            val code = WebhookSender.get(
+                webhookUrl,
+                connectTimeoutMs = 4_000,
+                readTimeoutMs = 4_000,
+                maxAttempts = 1,
+                retryDelayMs = 0,
+            )
             Log.d(TAG, "Direct webhook response: $code")
         } catch (e: Exception) {
             Log.e(TAG, "Direct webhook failed: ${e.message}")

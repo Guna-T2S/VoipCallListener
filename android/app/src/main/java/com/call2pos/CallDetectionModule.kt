@@ -110,6 +110,16 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
         CallListenerStorage.setCountryIso(reactContext, iso)
     }
 
+    @ReactMethod
+    fun setHost(host: String) {
+        CallListenerStorage.setHost(reactContext, host)
+    }
+
+    @ReactMethod
+    fun setContactNo(contactNo: String) {
+        CallListenerStorage.setContactNo(reactContext, contactNo)
+    }
+
     /** Resolves true if SYSTEM_ALERT_WINDOW is already granted. */
     @ReactMethod
     fun canDrawOverlays(promise: Promise) {

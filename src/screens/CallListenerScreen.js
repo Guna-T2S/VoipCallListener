@@ -117,15 +117,18 @@ export default function CallListenerScreen() {
   }, []);
 
   const activeStoreId = authState.activeStore?.store_id;
+  const activeStoreHost = authState.activeStore?.host;
+  const activeStoreContactNo = authState.activeStore?.contact_no;
 
   // Persist for native killed-state webhook (Android BroadcastReceiver).
+  // host + contact_no are needed natively to rebuild the s_key signature.
   useEffect(() => {
     if (activeStoreId) {
-      persistStoreIdForNative(activeStoreId);
+      persistStoreIdForNative(activeStoreId, activeStoreHost, activeStoreContactNo);
     } else {
       clearStoreIdForNative();
     }
-  }, [activeStoreId]);
+  }, [activeStoreId, activeStoreHost, activeStoreContactNo]);
 
   useEffect(() => {
     if (!activeStoreId) {
@@ -145,7 +148,13 @@ export default function CallListenerScreen() {
       const handleIncomingCall = (phoneNo) => {
         const {phoneNumber} = parseCallerInfo(phoneNo, storeCountryCode);
 
-        dispatch(incomingCallDetected(phoneNumber, activeStoreId));
+        const storeConfig = {
+          id: authState.activeStore?.store_id,
+          host: authState.activeStore?.host,
+          contact_no: authState.activeStore?.contact_no,
+        };
+
+        dispatch(incomingCallDetected(phoneNumber, storeConfig));
       };
 
       cleanupRef.current = startCallDetection(handleIncomingCall);

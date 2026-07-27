@@ -11,10 +11,10 @@ import {sendCallToWebhook} from '../services/webhookService';
  * Triggered only while the phone is ringing (INCOMING_CALL_DETECTED).
  */
 function* handleIncomingCall(action) {
-  const {phoneNumber, storeId} = action.payload;
+  const {phoneNumber, storeConfig} = action.payload;
 
   try {
-    const response = yield call(sendCallToWebhook, phoneNumber, storeId);
+    const response = yield call(sendCallToWebhook, phoneNumber, storeConfig);
     yield put(sendToWebhookSuccess(response));
 
   } catch (error) {

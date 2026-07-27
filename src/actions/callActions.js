@@ -8,9 +8,9 @@ export const CALL_ACTIONS = {
 };
 
 // Action Creators
-export const incomingCallDetected = (phoneNumber, storeId) => ({
+export const incomingCallDetected = (phoneNumber, storeConfig) => ({
   type: CALL_ACTIONS.INCOMING_CALL_DETECTED,
-  payload: { phoneNumber, storeId },
+  payload: { phoneNumber, storeConfig },
 });
 
 export const sendToWebhook = (phoneNumber, countryCode, takeawayNumber) => ({

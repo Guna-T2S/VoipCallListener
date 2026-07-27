@@ -2,6 +2,9 @@
 
     <!-- Network access for webhook calls -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets us wait for a validated internet network before firing the webhook
+         (the data path is briefly unavailable the instant a call rings). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Read phone state to detect incoming calls -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />

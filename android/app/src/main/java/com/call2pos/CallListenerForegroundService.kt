@@ -14,8 +14,6 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import java.util.Locale
 import androidx.core.app.NotificationCompat
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 /**
@@ -109,17 +107,26 @@ class CallListenerForegroundService : Service() {
         }
         try {
             val from = normalizeFromNumber(phoneNumber, context)
+            val sKey = WebhookSigner.buildSecurityKey(
+                storeId,
+                CallListenerStorage.getHost(context),
+                CallListenerStorage.getContactNo(context),
+            )
             val url =
                 "$WEBHOOK_BASE_URL?from=${URLEncoder.encode(from, "UTF-8")}" +
-                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}"
+                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}" +
+                    "&s_key=${URLEncoder.encode(sKey, "UTF-8")}"
+            // Wait for a validated network first — the data path is briefly down at ring.
+            NetworkWaiter.awaitValidatedInternet(context, 12_000)
+
             Log.d(TAG, "Calling webhook: $url")
-            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 8_000
-                readTimeout = 8_000
-            }
-            val code = conn.responseCode
-            conn.disconnect()
+            val code = WebhookSender.get(
+                url,
+                connectTimeoutMs = 8_000,
+                readTimeoutMs = 8_000,
+                maxAttempts = 2,
+                retryDelayMs = 1_000,
+            )
             Log.d(TAG, "Service webhook response: $code")
         } catch (e: Exception) {
             Log.e(TAG, "Service webhook failed: ${e.message}")

@@ -1,4 +1,4 @@
-package com.fh.foodhubcallerid
+package com.call2pos
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,8 +14,6 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import java.util.Locale
 import androidx.core.app.NotificationCompat
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 /**
@@ -30,8 +28,8 @@ import java.net.URLEncoder
  *    service keeps the process alive because foreground services are protected.
  *
  * Lifecycle:
- *   Start → CallDetectionModule.setTakeawayNumber() (when user selects a store)
- *   Stop  → CallDetectionModule.clearTakeawayNumber() (on logout / store removed)
+ *   Start → CallDetectionModule.setStoreId() (when user selects a store)
+ *   Stop  → CallDetectionModule.clearStoreId() (on logout / store removed)
  *   Auto-restart after boot → BootReceiver
  *
  * START_STICKY ensures Android restarts the service if it's killed by the OS
@@ -46,7 +44,7 @@ class CallListenerForegroundService : Service() {
         private const val WEBHOOK_BASE_URL =
             "https://falcon-direct.t2sonline.com/event/hook"
 
-        const val ACTION_SEND_WEBHOOK = "com.fh.foodhubcallerid.SEND_WEBHOOK"
+        const val ACTION_SEND_WEBHOOK = "com.call2pos.SEND_WEBHOOK"
         const val EXTRA_PHONE_NUMBER = "phone_number"
 
         /**
@@ -63,7 +61,13 @@ class CallListenerForegroundService : Service() {
         isRunning = true
         createNotificationChannel()
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
@@ -96,25 +100,33 @@ class CallListenerForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun sendWebhook(context: Context, phoneNumber: String) {
-        val takeawayNumber = CallListenerStorage.getTakeawayNumber(context)
-        if (takeawayNumber == null) {
-            Log.w(TAG, "No takeaway number configured — skipping webhook")
+        val storeId = CallListenerStorage.getStoreId(context)
+        if (storeId == null) {
+            Log.w(TAG, "No store id configured — skipping webhook")
             return
         }
         try {
             val from = normalizeFromNumber(phoneNumber, context)
-            val to = sanitizePhone(takeawayNumber)
+            val sKey = WebhookSigner.buildSecurityKey(
+                storeId,
+                CallListenerStorage.getHost(context),
+                CallListenerStorage.getContactNo(context),
+            )
             val url =
                 "$WEBHOOK_BASE_URL?from=${URLEncoder.encode(from, "UTF-8")}" +
-                    "&to=${URLEncoder.encode(to, "UTF-8")}"
+                    "&store_id=${URLEncoder.encode(storeId, "UTF-8")}" +
+                    "&s_key=${URLEncoder.encode(sKey, "UTF-8")}"
+            // Wait for a validated network first — the data path is briefly down at ring.
+            NetworkWaiter.awaitValidatedInternet(context, 12_000)
+
             Log.d(TAG, "Calling webhook: $url")
-            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 8_000
-                readTimeout = 8_000
-            }
-            val code = conn.responseCode
-            conn.disconnect()
+            val code = WebhookSender.get(
+                url,
+                connectTimeoutMs = 8_000,
+                readTimeoutMs = 8_000,
+                maxAttempts = 2,
+                retryDelayMs = 1_000,
+            )
             Log.d(TAG, "Service webhook response: $code")
         } catch (e: Exception) {
             Log.e(TAG, "Service webhook failed: ${e.message}")

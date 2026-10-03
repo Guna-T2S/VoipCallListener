@@ -11,19 +11,17 @@ import {
 } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  incomingCallDetected,
-  callListenerScreenLoaded,
-} from '../actions/callActions';
+import { incomingCallDetected } from '../actions/callActions';
 import { startCallDetection } from '../services/callDetectionService';
 import {
-  persistTakeawayNumberForNative,
-  clearTakeawayNumberForNative,
+  persistStoreIdForNative,
+  clearStoreIdForNative,
 } from '../services/callListenerNativeStorage';
 import { onLogoutAction } from 'appmodules/AuthModule/Redux/AuthActions';
 import { parseCallerInfo } from '../utils/phoneUtils';
 import { getVersion, getBuildNumber } from 'react-native-device-info';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import T2SRNModal from '../../T2SBaseModule/CommonUI/components/T2SRNModal';
 
 const { CallDetection } = NativeModules;
 
@@ -42,8 +40,12 @@ const checkRequiredPhonePermissions = async () => {
 
 // ─── Permission request (Android only) ──────────────────────────────────────
 
-const requestAndroidPermissions = async () => {
+const requestAndroidPermissions = async showDisclosure => {
   if (Platform.OS !== 'android') return true;
+
+  if (showDisclosure) {
+    await showDisclosure();
+  }
 
   const permissions = [...REQUIRED_PHONE_PERMISSIONS];
   if (Platform.Version >= 26 && PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS) {
@@ -62,14 +64,31 @@ export default function CallListenerScreen() {
   const authState = useSelector(state => state.activeStoreState);
   const storeCountryCode = useSelector(state => state.appState?.countryConfigResponse?.country?.iso);
   const cleanupRef = useRef(null);
-  const [takeawayNumber, setTakeawayNumber] = useState(null);
+  const phonePermissionModalResolveRef = useRef(null);
   const [overlayGranted, setOverlayGranted] = useState(true);
   const [phonePermissionsGranted, setPhonePermissionsGranted] = useState(true);
+  const [showPhonePermissionModal, setShowPhonePermissionModal] = useState(false);
+  const [showOverlayPermissionModal, setShowOverlayPermissionModal] = useState(false);
   const [versionLabel, setVersionLabel] = useState('');
 
-  useEffect(() => {
-    dispatch(callListenerScreenLoaded());
-  }, [dispatch]);
+  const showPhonePermissionDisclosure = () =>
+    new Promise(resolve => {
+      phonePermissionModalResolveRef.current = resolve;
+      setShowPhonePermissionModal(true);
+    });
+
+  const handlePhonePermissionContinue = () => {
+    setShowPhonePermissionModal(false);
+    phonePermissionModalResolveRef.current?.();
+    phonePermissionModalResolveRef.current = null;
+  };
+
+  const closeOverlayPermissionModal = () => setShowOverlayPermissionModal(false);
+
+  const handleOpenOverlaySettings = () => {
+    setShowOverlayPermissionModal(false);
+    CallDetection?.requestOverlayPermission?.();
+  };
 
   useEffect(() => {
     Promise.all([getVersion(), getBuildNumber()])
@@ -97,32 +116,22 @@ export default function CallListenerScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  const callCenterConfig = callState.callCenterConfig;
   const activeStoreId = authState.activeStore?.store_id;
-
-  useEffect(() => {
-    if (!callCenterConfig || !activeStoreId) return;
-    const match = callCenterConfig.find(
-      item => String(item.id) === String(activeStoreId),
-    );
-    if (match) {
-      setTakeawayNumber(match.number);
-    } else {
-      setTakeawayNumber(null);
-    }
-  }, [callCenterConfig, activeStoreId]);
+  const activeStoreHost = authState.activeStore?.host;
+  const activeStoreContactNo = authState.activeStore?.contact_no;
 
   // Persist for native killed-state webhook (Android BroadcastReceiver).
+  // host + contact_no are needed natively to rebuild the s_key signature.
   useEffect(() => {
-    if (takeawayNumber) {
-      persistTakeawayNumberForNative(takeawayNumber);
+    if (activeStoreId) {
+      persistStoreIdForNative(activeStoreId, activeStoreHost, activeStoreContactNo);
     } else {
-      clearTakeawayNumberForNative();
+      clearStoreIdForNative();
     }
-  }, [takeawayNumber]);
+  }, [activeStoreId, activeStoreHost, activeStoreContactNo]);
 
   useEffect(() => {
-    if (!takeawayNumber) {
+    if (!activeStoreId) {
       cleanupRef.current?.();
       cleanupRef.current = null;
       return undefined;
@@ -131,15 +140,21 @@ export default function CallListenerScreen() {
     let mounted = true;
 
     const init = async () => {
-      const granted = await requestAndroidPermissions();
+      const granted = await requestAndroidPermissions(showPhonePermissionDisclosure);
       const requiredGranted = await checkRequiredPhonePermissions();
       if (mounted) setPhonePermissionsGranted(requiredGranted);
       if (!granted || !mounted) return;
 
       const handleIncomingCall = (phoneNo) => {
         const {phoneNumber} = parseCallerInfo(phoneNo, storeCountryCode);
-        
-        dispatch(incomingCallDetected(phoneNumber, takeawayNumber));
+
+        const storeConfig = {
+          id: authState.activeStore?.store_id,
+          host: authState.activeStore?.host,
+          contact_no: authState.activeStore?.contact_no,
+        };
+
+        dispatch(incomingCallDetected(phoneNumber, storeConfig));
       };
 
       cleanupRef.current = startCallDetection(handleIncomingCall);
@@ -152,7 +167,7 @@ export default function CallListenerScreen() {
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [dispatch, takeawayNumber]);
+  }, [dispatch, activeStoreId, storeCountryCode]);
 
   const listeningActive =
     Platform.OS !== 'android' || phonePermissionsGranted;
@@ -179,7 +194,7 @@ export default function CallListenerScreen() {
         <TouchableOpacity
           style={styles.logoutBtn}
           onPress={() => {
-            clearTakeawayNumberForNative();
+            clearStoreIdForNative();
             dispatch(onLogoutAction());
           }}
         >
@@ -203,7 +218,8 @@ export default function CallListenerScreen() {
       {Platform.OS === 'android' && !overlayGranted && (
         <TouchableOpacity
           style={styles.warningBanner}
-          onPress={() => CallDetection?.requestOverlayPermission?.()}>
+          onPress={() => setShowOverlayPermissionModal(true)}
+        >
           <Text style={styles.warningBannerText}>
             Enable "Display over other apps" to see call alerts on any screen
           </Text>
@@ -211,7 +227,7 @@ export default function CallListenerScreen() {
         </TouchableOpacity>
       )}
 
-      {!takeawayNumber ? (
+      {!activeStoreId ? (
         <View style={styles.infoTextContainer}>
           <Text style={styles.infoText}>Contact foodhub to activate</Text>
         </View>
@@ -260,6 +276,57 @@ export default function CallListenerScreen() {
       {versionLabel ? (
         <Text style={styles.versionText}>{versionLabel}</Text>
       ) : null}
+
+      <T2SRNModal
+        isVisible={showPhonePermissionModal}
+        onBackdropPress={() => {}}
+      >
+        <View style={styles.permissionModal}>
+          <Text style={styles.permissionModalTitle}>Phone access required</Text>
+          <Text style={styles.permissionModalBody}>
+            Foodhub Caller ID needs access to your phone state and call log to detect
+            incoming calls and identify the caller number. This information is used only
+            to match the call against your configured store number and is never stored or
+            shared beyond your Foodhub account.
+          </Text>
+          <TouchableOpacity
+            style={styles.permissionModalButton}
+            onPress={handlePhonePermissionContinue}
+          >
+            <Text style={styles.permissionModalButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </T2SRNModal>
+
+      <T2SRNModal
+        isVisible={showOverlayPermissionModal}
+        onBackdropPress={closeOverlayPermissionModal}
+      >
+        <View style={styles.permissionModal}>
+          <Text style={styles.permissionModalTitle}>
+            "Display over other apps" required
+          </Text>
+          <Text style={styles.permissionModalBody}>
+            To show incoming call alerts on any screen — including the lock screen —
+            Foodhub Caller ID needs permission to display over other apps.{'\n\n'}
+            Tap "Open Settings", then enable "Display over other apps" for Foodhub Caller ID.
+          </Text>
+          <View style={styles.permissionModalActions}>
+            <TouchableOpacity
+              style={[styles.permissionModalButton, styles.permissionModalButtonSecondary]}
+              onPress={closeOverlayPermissionModal}
+            >
+              <Text style={styles.permissionModalButtonSecondaryText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.permissionModalButton}
+              onPress={handleOpenOverlaySettings}
+            >
+              <Text style={styles.permissionModalButtonText}>Open Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </T2SRNModal>
     </SafeAreaView>
   );
 }
@@ -355,6 +422,52 @@ const styles = StyleSheet.create({
     color: '#FFD580',
     fontSize: 12,
     marginTop: 4,
+    fontWeight: '600',
+  },
+  permissionModal: {
+    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+    padding: 24,
+    marginHorizontal: 24,
+    maxWidth: 400,
+  },
+  permissionModalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  permissionModalBody: {
+    color: '#ccc',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  permissionModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  permissionModalButton: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    maxHeight: 50
+  },
+  permissionModalButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  permissionModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  permissionModalButtonSecondaryText: {
+    color: '#aaa',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

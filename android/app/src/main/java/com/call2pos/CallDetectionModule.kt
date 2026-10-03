@@ -1,4 +1,4 @@
-package com.fh.foodhubcallerid
+package com.call2pos
 
 import android.content.Context
 import android.content.Intent
@@ -89,8 +89,8 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun setTakeawayNumber(number: String) {
-        CallListenerStorage.setTakeawayNumber(reactContext, number)
+    fun setStoreId(storeId: String) {
+        CallListenerStorage.setStoreId(reactContext, storeId)
         ContextCompat.startForegroundService(
             reactContext,
             Intent(reactContext, CallListenerForegroundService::class.java),
@@ -98,8 +98,8 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun clearTakeawayNumber() {
-        CallListenerStorage.clearTakeawayNumber(reactContext)
+    fun clearStoreId() {
+        CallListenerStorage.clearStoreId(reactContext)
         reactContext.stopService(
             Intent(reactContext, CallListenerForegroundService::class.java),
         )
@@ -108,6 +108,16 @@ class CallDetectionModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun setCountryIso(iso: String) {
         CallListenerStorage.setCountryIso(reactContext, iso)
+    }
+
+    @ReactMethod
+    fun setHost(host: String) {
+        CallListenerStorage.setHost(reactContext, host)
+    }
+
+    @ReactMethod
+    fun setContactNo(contactNo: String) {
+        CallListenerStorage.setContactNo(reactContext, contactNo)
     }
 
     /** Resolves true if SYSTEM_ALERT_WINDOW is already granted. */

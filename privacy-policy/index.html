@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Call2POS — Privacy Policy</title>
+  <meta name="description" content="Privacy Policy for the Call2POS Android application, developed and published by Kitchen Control." />
+  <style>
+    :root { --fg:#1a1a2e; --muted:#5a5a72; --accent:#0b5fff; --line:#e4e4ee; --bg:#ffffff; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #f6f7fb; color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.65; font-size: 16px;
+    }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+    header { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 28px 30px; margin-bottom: 24px; }
+    h1 { font-size: 1.7rem; margin: 0 0 6px; }
+    h2 { font-size: 1.2rem; margin: 34px 0 10px; padding-top: 8px; }
+    h3 { font-size: 1.02rem; margin: 20px 0 6px; }
+    .card { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 8px 30px 26px; }
+    .meta { color: var(--muted); font-size: 0.92rem; margin: 2px 0; }
+    a { color: var(--accent); }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.94rem; display: block; overflow-x: auto; }
+    th, td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+    th { background: #f0f2f8; }
+    ul { padding-left: 20px; }
+    li { margin: 5px 0; }
+    code { background: #f0f2f8; padding: 1px 6px; border-radius: 5px; font-size: 0.9em; }
+    .callout { background: #eef4ff; border: 1px solid #cfe0ff; border-radius: 10px; padding: 14px 18px; margin: 16px 0; }
+    footer { color: var(--muted); font-size: 0.86rem; margin-top: 40px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Privacy Policy for Call2POS</h1>
+      <p class="meta"><strong>Application:</strong> Call2POS (Android package ID: <code>com.call2pos</code>)</p>
+      <p class="meta"><strong>Developer / Publisher:</strong> Kitchen Control</p>
+      <p class="meta"><strong>Contact:</strong> <a href="mailto:touch2success.info@gmail.com">touch2success.info@gmail.com</a></p>
+      <p class="meta"><strong>Effective date:</strong> 12 August 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> 12 August 2026</p>
+    </header>
+
+    <div class="card">
+      <h2>1. Introduction</h2>
+      <p>
+        This Privacy Policy explains how <strong>Kitchen Control</strong> ("we", "us", or "our"), the developer
+        and publisher of the <strong>Call2POS</strong> mobile application ("the App", Android package ID
+        <code>com.call2pos</code>), handles information in connection with your use of the App.
+      </p>
+      <p>
+        Call2POS is a business tool for restaurants and takeaways. It runs on a device used by a restaurant
+        operator, detects incoming telephone calls to that device, reads the caller's phone number, and forwards
+        that number to the restaurant's own Point-of-Sale (POS) platform so that the incoming caller can be
+        identified. The App is not intended for use by members of the general public and is only useful when
+        activated with a valid restaurant account.
+      </p>
+
+      <div class="callout">
+        <strong>In short:</strong> Call2POS reads the phone number of an incoming call and sends only that number
+        (plus the store identifier the operator configured) to the restaurant's POS platform. The App does not
+        record calls, does not read your contacts, does not track your location, does not show advertisements,
+        and does not sell your data.
+      </div>
+
+      <h2>2. Information We Process</h2>
+      <p>The App processes the minimum information required to perform its single function:</p>
+      <table>
+        <thead>
+          <tr><th>Data</th><th>Why it is processed</th><th>How it is used</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Incoming caller phone number</td>
+            <td>Core function of the App: to identify the customer calling the restaurant.</td>
+            <td>Read at the moment a call rings and transmitted over an encrypted (HTTPS) connection to the
+                restaurant's configured POS platform. It is not stored on the device by the App.</td>
+          </tr>
+          <tr>
+            <td>Call state (ringing / idle)</td>
+            <td>To detect when an incoming call begins so the number can be read.</td>
+            <td>Used only in memory to trigger the transmission. Not stored or transmitted.</td>
+          </tr>
+          <tr>
+            <td>Store configuration (store ID, host, restaurant contact number)</td>
+            <td>Entered or provisioned by the restaurant operator to link the device to the correct POS account.</td>
+            <td>Stored locally on the device and used to address and authenticate the webhook request.</td>
+          </tr>
+          <tr>
+            <td>Network connectivity state</td>
+            <td>To wait for a working internet connection before sending the number.</td>
+            <td>Used only in memory. Not stored or transmitted.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>The App does NOT collect, store, or transmit:</strong></p>
+      <ul>
+        <li>Your contacts or address book</li>
+        <li>Audio recordings or the content of any call — calls are never recorded</li>
+        <li>Your call history/log for browsing purposes (the call-log permission is used only to read the
+            number of the current incoming call, as required by Android 10+)</li>
+        <li>Your location (GPS or otherwise)</li>
+        <li>Advertising identifiers, and the App contains no third-party advertising or analytics SDKs</li>
+        <li>Any personal profile, account name, email, or payment information collected by the App itself</li>
+      </ul>
+
+      <h2>3. Android Permissions and How They Are Used</h2>
+      <p>The App requests only the permissions strictly necessary for its core function. When a call rings, the
+         operator is shown context explaining why access is required before any sensitive permission is used.</p>
+      <table>
+        <thead><tr><th>Permission</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>READ_PHONE_STATE</code></td><td>Detect that an incoming call is ringing.</td></tr>
+          <tr><td><code>READ_CALL_LOG</code> (Android 10+)</td><td>Obtain the incoming caller's number, which on modern Android versions is only available through this permission.</td></tr>
+          <tr><td><code>INTERNET</code> / <code>ACCESS_NETWORK_STATE</code></td><td>Send the caller number to the restaurant's POS platform and wait for a valid network connection.</td></tr>
+          <tr><td><code>FOREGROUND_SERVICE</code> / <code>FOREGROUND_SERVICE_SPECIAL_USE</code></td><td>Keep the call-detection service running reliably so calls are not missed when the App is in the background.</td></tr>
+          <tr><td><code>RECEIVE_BOOT_COMPLETED</code></td><td>Restart call detection automatically after the device reboots.</td></tr>
+          <tr><td><code>SYSTEM_ALERT_WINDOW</code></td><td>Optionally display an incoming-call banner over other screens. Must be granted manually by the operator and can be revoked at any time.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>4. How Information Is Shared</h2>
+      <p>
+        The incoming caller number is transmitted only to the <strong>restaurant's own POS / caller-identification
+        platform</strong> that the operator configured (direct webhook endpoint), for the sole
+        purpose of identifying the caller within that restaurant's ordering system. This transfer is:
+      </p>
+      <ul>
+        <li>Sent over an encrypted HTTPS connection;</li>
+        <li>Authenticated using a security key derived from the store's configuration;</li>
+        <li>Limited to the caller number and the store identifier — nothing more.</li>
+      </ul>
+      <p>
+        We do <strong>not</strong> sell, rent, or trade any information. We do not share information with
+        advertisers or data brokers. Information may be disclosed only where required by law or to protect the
+        rights, safety, and security of our users and services.
+      </p>
+
+      <h2>5. Data Retention</h2>
+      <p>
+        The App does not maintain its own database of caller numbers on the device. The caller number is held in
+        memory only long enough to transmit it, and store configuration is retained locally until the operator
+        signs out, clears the App's data, or uninstalls the App. Any retention of the caller number after it
+        reaches the POS platform is governed by that platform's own privacy policy and the restaurant's data
+        practices.
+      </p>
+
+      <h2>6. Data Security</h2>
+      <p>
+        All transmissions from the App use HTTPS/TLS encryption. Requests to the POS platform are authenticated
+        with a per-store security key. Because the App stores no caller history on the device, there is no
+        on-device repository of personal data to be exposed. No method of transmission or storage is completely
+        secure, and we cannot guarantee absolute security.
+      </p>
+
+      <h2>7. Children's Privacy</h2>
+      <p>
+        Call2POS is a business tool intended for restaurant operators and is not directed to children under the
+        age of 13 (or the equivalent minimum age in your jurisdiction). We do not knowingly collect personal
+        information from children.
+      </p>
+
+      <h2>8. Your Rights</h2>
+      <p>
+        The App does not store any personal data about callers. It only reads an incoming caller's phone number and
+        transmits it to the restaurant's POS platform; the number is not retained by the App. Depending on your
+        jurisdiction, you may have the right to access, correct, or request
+        deletion of your personal data, or to object to or restrict its processing. Because the App keeps no caller
+        records, any such request relating to caller data should be directed to the restaurant and its POS platform,
+        which is the party that stores that data. You can revoke the App's permissions at any time in your device's
+        system settings, and you can remove the locally stored store configuration by clearing the App's data or
+        uninstalling it. To contact us about this policy, use the details below.
+      </p>
+
+      <h2>9. Changes to This Policy</h2>
+      <p>
+        We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated" date at
+        the top of this page. Material changes will be reflected here, and your continued use of the App after an
+        update constitutes acceptance of the revised policy.
+      </p>
+
+      <h2>10. Contact Us</h2>
+      <p>
+        If you have questions about this Privacy Policy or the App's data practices, contact:
+      </p>
+      <ul>
+        <li><strong>Developer / Publisher:</strong> Kitchen Control</li>
+        <li><strong>Application:</strong> Call2POS (<code>com.call2pos</code>)</li>
+        <li><strong>Email:</strong> <a href="mailto:touch2success.info@gmail.com">touch2success.info@gmail.com</a></li>
+      </ul>
+
+      <footer>
+        © 2026 Kitchen Control. All rights reserved. · Call2POS Privacy Policy
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

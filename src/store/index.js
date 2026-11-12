@@ -63,7 +63,7 @@ const rootReducer = combineReducers({
   authState: authReducer,
   appState: appStateReducer,
   activeStoreState: activeStoreReducer,
-  featuresState: stubReducer({GDPRTermsAndCondition: null, GDPRPrivacyPolicy: null, isAdyenConfiguredTA: false}),
+  featuresState: stubReducer({GDPRTermsAndCondition: null, GDPRPrivacyPolicy: null}),
   configuratorState: stubReducer({isAutomation: false}),
   dashboardState: stubReducer({settingsResponse: null}),
   userSessionState: stubReducer({access_token: null}),

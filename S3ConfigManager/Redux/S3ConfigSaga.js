@@ -546,11 +546,6 @@ function* checkAndGetPreSignedURLExpiry(action) {
 
 function* checkAndUpdateNewTAConfig(config) {
     let updateS3Config = false;
-    // To Add the isAdyenOfflineEnabled key if it does not exist
-    if (!isValidElement(config?.isAdyenOfflineEnabled)) {
-        config.isAdyenOfflineEnabled = true;
-        updateS3Config = true;
-    }
     // To Add the appInfo key if it does not exist
     if (!isValidElement(config?.appInfo)) {
         const macAddress = yield call(getMacAddress);

@@ -11,6 +11,7 @@
     "reactotron": "adb reverse tcp:9090 tcp:9090"
   },
   "dependencies": {
+    "@foodhubglobal/rn-fh-sdk": "1.6.0",
     "@react-native-async-storage/async-storage": "3.0.2",
     "@react-native-picker/picker": "2.11.4",
     "@react-native/new-app-screen": "0.80.3",

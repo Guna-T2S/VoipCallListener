@@ -1,4 +1,4 @@
-import { all, put, takeLatest, select, putResolve, call } from '@redux-saga/core/effects';
+import { all, put, takeLatest, select, putResolve } from '@redux-saga/core/effects';
 import { isArrayNonEmpty, isValidElement, isValidString } from 't2sbasemodule/Utils/helpers';
 import { login } from '../Utils/AuthNetwork';
 import * as AuthTypes from './AuthTypes';
@@ -10,9 +10,8 @@ import { LOGIN_API } from 'appmodules/AuthModule/Redux/AuthTypes';
 import { addExpiresTimeToCurrentTAList } from 'appmodules/DashboardModule/Utils/DashboardHelper';
 import { FEATURE_GATE} from 'mytakeaway/Redux/Actions/Types';
 import { formatCallCenterConfig } from 'webmodules/Utils/WebHelpers';
-import { isFusionDevice, isNormalDevice, isTabletDevice, isWeb } from 't2sbasemodule/Utils/AppTypeHelper';
+import { isFusionDevice, isTabletDevice } from 't2sbasemodule/Utils/AppTypeHelper';
 import { ACTIVE_STORE_TYPES } from 'appmodules/SelectTakeawayModule/Redux/SelectTakeawayTypes';
-import { AdyenTapToPay } from 'appmodules/NativeModules/MYTNativeSupport';
 
 export function* makeLoginCall(action) {
     try {
@@ -91,13 +90,6 @@ function* registerSelectedTA({ phone, takeawayList }) {
 
 export function* removeDeviceTokenCall(action) {
     try {
-        // MYTL-6457 - clear session
-        const isAdyenConfiguredTA = yield select((state) => state.featuresState.isAdyenConfiguredTA);
-        if (isNormalDevice && !isWeb && isAdyenConfiguredTA) {
-            try {
-                yield call(AdyenTapToPay.clearSession);
-            } catch (e) { }
-        }
         // FTP-5307 - logout
         if (!isFusionDevice) {
             const acccessToken = yield select((state) => state.userSessionState.access_token);

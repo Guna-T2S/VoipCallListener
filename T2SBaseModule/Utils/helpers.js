@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { AppConfig } from './AppConfig';
 
 export const isValidElement = (data) => data !== null && data !== undefined;
 export const isValidString = (data) => data !== null && data !== undefined && data !== '';
@@ -99,4 +100,9 @@ export const randomStringWithLength = (length) => {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     return result;
+};
+
+
+export const isProd = () => {
+    return AppConfig.buildConfig.buildType !== 'debug';
 };

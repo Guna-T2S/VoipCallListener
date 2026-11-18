@@ -13,6 +13,7 @@ import { formatCallCenterConfig } from 'webmodules/Utils/WebHelpers';
 import { isFusionDevice, isNormalDevice, isTabletDevice, isWeb } from 't2sbasemodule/Utils/AppTypeHelper';
 import { ACTIVE_STORE_TYPES } from 'appmodules/SelectTakeawayModule/Redux/SelectTakeawayTypes';
 import { AdyenTapToPay } from 'appmodules/NativeModules/MYTNativeSupport';
+import { logout as dipLogout } from '@foodhubglobal/rn-fh-sdk';
 
 export function* makeLoginCall(action) {
     try {
@@ -90,6 +91,14 @@ function* registerSelectedTA({ phone, takeawayList }) {
 }
 
 export function* removeDeviceTokenCall(action) {
+    // DIP: stop heartbeat/config-poll loops. Keeps the device token, so the till stays
+    // enrolled with DIP. Never let it block the in-app logout below.
+    try {
+        dipLogout();
+    } catch (_) {
+        // DIP must never block the in-app logout below
+    }
+
     try {
         // MYTL-6457 - clear session
         const isAdyenConfiguredTA = yield select((state) => state.featuresState.isAdyenConfiguredTA);
@@ -100,14 +109,15 @@ export function* removeDeviceTokenCall(action) {
         }
         // FTP-5307 - logout
         if (!isFusionDevice) {
-            const acccessToken = yield select((state) => state.userSessionState.access_token);
-            yield apiCall(login.invalidateAccessToken, acccessToken);
+            const accessToken = yield select((state) => state.userSessionState.access_token);
+            yield apiCall(login.invalidateAccessToken, accessToken);
         }
         if (isValidString(action.fcmToken) && isValidString(action.apiToken)) {
             yield apiCall(login.removeDeviceTokenCall, action);
         }
-        yield put({ type: LOGIN_API.INVALID_SESSION });
     } catch (e) {
+        // always fall through to INVALID_SESSION below
+    } finally {
         yield put({ type: LOGIN_API.INVALID_SESSION });
     }
 }

@@ -22,6 +22,7 @@ import { parseCallerInfo } from '../utils/phoneUtils';
 import { getVersion, getBuildNumber } from 'react-native-device-info';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import T2SRNModal from '../../T2SBaseModule/CommonUI/components/T2SRNModal';
+import DipSync from '../../AppModules/SideMenu/Components/DipSync';
 
 const { CallDetection } = NativeModules;
 
@@ -327,6 +328,7 @@ export default function CallListenerScreen() {
           </View>
         </View>
       </T2SRNModal>
+       <DipSync />
     </SafeAreaView>
   );
 }

@@ -1,11 +1,13 @@
 import axios from 'axios';
 import sha256 from 'crypto-js/sha256';
 import hexEnc from 'crypto-js/enc-hex';
+import { isProd } from 't2sbasemodule/Utils/helpers';
 
-const WEBHOOK_BASE_URL = 'https://falcon-direct.t2sonline.com/event/hook';
-
+const WEBHOOK_BASE_URL = isProd()
+  ? 'https://falcon-direct.t2sonline.com/event/hook'
+  : 'https://falcon-sit-direct.stage.t2sonline.com/event/hook';
 /**
- * Builds the security key appended to the webhook URL.
+ * Builds the security key appended to the webhook URL.1
  * s_key = sha256(`${id}|${host}|${contact_no}`) as a hex digest.
  * @param {{id: string|number, host: string, contact_no: string}} config
  */

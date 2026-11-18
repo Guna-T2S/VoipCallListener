@@ -3,10 +3,10 @@ import { Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { getBuildNumber, getVersion } from 'react-native-device-info';
 import { init, onboard } from '@foodhubglobal/rn-fh-sdk';
-import { PRINTER_TYPE } from '@foodhubglobal/foodhub-printer';
-import { BASE_API_CONFIG, DIP_DEVICE_TYPE, DIP_ENV, DIP_PROTOCOL } from '../Network/ApiConfig';
+// import { PRINTER_TYPE } from '@foodhubglobal/foodhub-printer';
+import { BASE_API_CONFIG, DIP_DEVICE_TYPE, DIP_ENV, DIP_PROTOCOL } from '../../../T2SBaseModule/Network/ApiConfig';
 
-const DIP_APP_NAME = BASE_API_CONFIG.appName.MBH_ORDERS;
+const DIP_APP_NAME = BASE_API_CONFIG.appName.CALL2POS;
 const isNative = Platform.OS !== 'web';
 
 let initPromise = null;
@@ -61,7 +61,7 @@ const DipSync = () => {
                     return;
                 }
                 // Printers can only be registered after onboard; the printer package swallows any DIP error.
-                dispatch({ type: PRINTER_TYPE.PRINTER_MODULE_TYPES.SYNC_PRINTERS_TO_DIP });
+                // dispatch({ type: PRINTER_TYPE.PRINTER_MODULE_TYPES.SYNC_PRINTERS_TO_DIP });
             })
             .catch(() => {
                 // DIP must never block the app; no automatic retry, onboard runs again on the next store/licence change or app relaunch
